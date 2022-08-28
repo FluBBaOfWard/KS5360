@@ -21,7 +21,7 @@
 #define GAME_HEIGHT (160)
 
 	svvptr		.req r12
-						;@ WSVideo.s
+						;@ SVVideo.s
 	.struct 0
 scanline:			.long 0		;@ These 3 must be first in state.
 nextLineChange:		.long 0
@@ -72,7 +72,7 @@ wsvTimerIRQReset:	.byte 0		;@ 0x24 Timer IRQ Reset
 wsvSndDMAIRQReset:	.byte 0		;@ 0x25 Sound DMA IRQ Reset
 wsvSystemControl:	.byte 0		;@ 0x26 System Control
 wsvIRQStatus:		.byte 0		;@ 0x27 IRQ Status
-wsvCh4FreqVol:		.byte 0		;@ 0x28 Channel 4 Frquency and volume
+wsvCh4FreqVol:		.byte 0		;@ 0x28 Channel 4 Frequency and volume
 wsvCh4Len:			.byte 0		;@ 0x29 Channel 4 Length
 wsvCh4Ctrl:			.byte 0		;@ 0x2A Channel 4 Control
 wsvPadding2:		.byte 0		;@ 0x2B ???
@@ -91,7 +91,7 @@ sndDmaLength:		.long 0		;@ Original Sound DMA length
 wsvSOC:				.byte 0		;@ ASWAN or KS5360
 wsvLatchedDispCtrl:	.byte 0		;@ Latched Display Control
 wsvLowBattery:		.byte 0
-wsvPadding13:		.space 1
+wsvPadding4:		.space 1
 
 scrollLine: 		.long 0		;@ Last line scroll was updated.
 ks5360StateEnd:

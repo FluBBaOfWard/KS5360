@@ -16,6 +16,8 @@
 #include "SVVideo.i"
 #include "../ARM6502/M6502.i"
 
+#define CYCLE_PSL (246*2)
+
 	.global svVideoInit
 	.global svVideoReset
 	.global svVideoSaveState
@@ -154,9 +156,9 @@ svRegistersReset:				;@ in r3=SOC
 
 ;@----------------------------------------------------------------------------
 IO_Default:
-	.byte 0x00, 0xA0, 0x9d, 0xbb, 0x00, 0x00, 0x00, 0x26, 0xfe, 0xde, 0xf9, 0xfb, 0xdb, 0xd7, 0x7f, 0xf5
-	.byte 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0xc6, 0x9b, 0x00, 0x00, 0x00, 0x00, 0x99, 0xfd, 0xb7, 0xdf
-	.byte 0x30, 0x57, 0x75, 0x76, 0x15, 0x73, 0x77, 0x77, 0x20, 0x75, 0x50, 0x36, 0x70, 0x67, 0x50, 0x77
+	.byte 0xA0, 0xA0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 
 ;@----------------------------------------------------------------------------
 svVideoSaveState:		;@ In r0=destination, r1=svvptr. Out r0=state size.
@@ -245,7 +247,7 @@ svRead:		;@ I/O read
 	sub r2,r0,#0x2000
 	cmp r2,#0x30
 	ldrmi pc,[pc,r2,lsl#2]
-	b svUnknownR
+	b svWSUnmappedR
 io_read_tbl:
 	.long svUnknownR	;@ 0x2000
 	.long svUnknownR
@@ -303,10 +305,7 @@ svWSUnmappedR:
 	stmfd sp!,{svvptr,lr}
 	bl _debugIOUnmappedR
 	ldmfd sp!,{svvptr,lr}
-	ldrb r0,[svvptr,#wsvSOC]
-	cmp r0,#SOC_ASWAN
-	moveq r0,#0x90
-	movne r0,#0x00
+	mov r0,#0x00
 	bx lr
 ;@----------------------------------------------------------------------------
 svUnknownR:
@@ -320,13 +319,14 @@ svImportantR:
 	ldmfd sp!,{r0,svvptr,lr}
 ;@----------------------------------------------------------------------------
 svRegR:
-	add r2,svvptr,#wsvRegs
-	ldrb r0,[r2,r0]
+//	add r2,svvptr,#wsvRegs
+//	ldrb r0,[r2,r0]
+	mov r0,#0
 	bx lr
 	.pool
 
 ;@----------------------------------------------------------------------------
-_2021r:		;@ IO port read
+_2021r:		;@ Link Port DDR read
 ;@----------------------------------------------------------------------------
 	ldrb r0,[svvptr,#wsvLinkPortDDR]
 	bx lr
@@ -338,10 +338,11 @@ _2022r:		;@ Link Port Data read
 ;@----------------------------------------------------------------------------
 _2023r:		;@ Timer value
 ;@----------------------------------------------------------------------------
-	mov r0,#0
+	ldr r0,[svvptr,#wsvTimerValue]
+	mov r0,r0,lsr#6
 	bx lr
 ;@----------------------------------------------------------------------------
-_2024r:		;@ Timer IRQ clear?
+_2024r:		;@ Timer IRQ clear
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{lr}
 	ldrb r0,[svvptr,#wsvIRQStatus]
@@ -377,7 +378,7 @@ svWrite:	;@ I/O write
 	sub r2,r0,#0x2000
 	cmp r2,#0x30
 	ldrmi pc,[pc,r2,lsl#2]
-	b wsvImportantW
+	b wsvUnmappedW
 io_write_tbl:
 	.long _2000w			;@ Horizontal screen size
 	.long _2001w			;@ Vertical screen size
@@ -415,10 +416,10 @@ io_write_tbl:
 	.long wsvImportantW
 	.long _2022w		;@ IO port write
 	.long _2023w		;@ Timer value
-	.long wsvImportantW
+	.long _2024w		;@ Timer IRQ clear
 	.long wsvImportantW
 	.long _2026w		;@ LCD & IRQs
-	.long wsvImportantW
+	.long wsvUnmappedW
 	.long wsvImportantW	;@ Sound DMA...
 	.long wsvImportantW
 	.long wsvImportantW
@@ -433,6 +434,7 @@ wsvUnknownW:
 ;@----------------------------------------------------------------------------
 wsvImportantW:
 ;@----------------------------------------------------------------------------
+	and r0,r0,#0xFF
 	add r2,svvptr,#wsvRegs
 	strb r1,[r2,r0]
 	ldr r2,=debugIOUnimplW
@@ -481,7 +483,7 @@ _2003w:
 	strb r1,[svvptr,#wsvYScroll]
 	bx lr
 ;@----------------------------------------------------------------------------
-_200Dw:		;@ Strange...
+_200Dw:		;@ DMA trigger
 _200Ew:		;@ TV link palette?
 _200Fw:		;@ TV link something
 	bx lr
@@ -504,6 +506,12 @@ _2023w:		;@ Timer value
 	str r1,[svvptr,#wsvTimerValue]
 	bx lr
 ;@----------------------------------------------------------------------------
+_2024w:		;@ Timer IRQ clear
+;@----------------------------------------------------------------------------
+	ldrb r0,[svvptr,#wsvIRQStatus]
+	bic r0,r0,#1
+	b svSetInterruptStatus
+;@----------------------------------------------------------------------------
 _2026w:		;@ LCD & IRQs
 ;@----------------------------------------------------------------------------
 	ldrb r0,[svvptr,#wsvSystemControl]
@@ -511,9 +519,11 @@ _2026w:		;@ LCD & IRQs
 	eor r0,r0,r1
 	tst r0,#0xE0
 	movne r1,r1,lsr#5
-	mov addy,lr
+	stmfd sp!,{lr}
 	blne BankSwitch89AB_W
-	mov lr,addy
+	ldrb r0,[svvptr,#wsvIRQStatus]
+	bl svUpdateIrqEnable
+	ldmfd sp!,{lr}
 	ldrb r0,[svvptr,#wsvSystemControl]
 
 	mov r1,#0x2840		;@ WIN0, BG2 enable. DISPCNTBUFF startvalue. 0x2840
@@ -630,9 +640,9 @@ frameEndHook:
 ;@----------------------------------------------------------------------------
 lineStateTable:
 	.long 0, newFrame			;@ zeroLine
-	.long 160, endFrame			;@ After last visible scanline
+	.long 158, endFrame			;@ After last visible scanline
 lineStateLastLine:
-	.long 164, frameEndHook		;@ totalScanlines
+	.long 160, frameEndHook		;@ totalScanlines
 ;@----------------------------------------------------------------------------
 #ifdef GBA
 	.section .iwram, "ax", %progbits	;@ For the GBA
@@ -674,7 +684,7 @@ noHBlIrq:
 	bl svSetInterruptStatus
 
 	ldr r0,[svvptr,#scanline]
-	subs r0,r0,#144				;@ Return from emulation loop on this scanline
+	subs r0,r0,#157				;@ Return from emulation loop on this scanline
 	movne r0,#1
 	ldmfd sp!,{pc}
 
@@ -685,8 +695,8 @@ svSetInterruptStatus:		;@ r0 = interrupt status
 	cmp r0,r2
 	bxeq lr
 	strb r0,[svvptr,#wsvIRQStatus]
-	ldrb r1,[svvptr,#wsvSystemControl]
 svUpdateIrqEnable:
+	ldrb r1,[svvptr,#wsvSystemControl]
 	and r0,r0,r1,lsr#1
 	ldr pc,[svvptr,#irqFunction]
 
