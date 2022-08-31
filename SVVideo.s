@@ -71,7 +71,7 @@ makeTileBgr:
 ;@----------------------------------------------------------------------------
 	mov r1,#BG_GFX
 	mov r0,#0
-	mov r2,#20
+	mov r2,#21
 oLoop:
 	mov r3,#24
 bgrLoop:
@@ -502,7 +502,6 @@ _2023w:		;@ Timer value
 ;@----------------------------------------------------------------------------
 	strb r1,[svvptr,#wsvIRQTimer]
 	mov r1,r1,lsl#6
-	str r1,[svvptr,#wsvTimerLatch]
 	str r1,[svvptr,#wsvTimerValue]
 	bx lr
 ;@----------------------------------------------------------------------------
@@ -611,13 +610,6 @@ endFrame:
 //	bl scrollCnt
 	bl endFrameGfx
 
-	ldrb r0,[svvptr,#wsvSystemControl]
-	tst r0,#0x1						;@ VBlank timer enabled?
-	beq noTimerVBlIrq
-	mov lr,pc
-	ldr pc,[svvptr,#nmiFunction]
-noTimerVBlIrq:
-
 	ldmfd sp!,{pc}
 
 ;@----------------------------------------------------------------------------
@@ -670,7 +662,6 @@ svDoScanline:
 checkScanlineIRQ:
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{lr}
-	ldrb r0,[svvptr,#wsvIRQStatus]
 
 	ldr r1,[svvptr,#wsvTimerValue]
 	ldrb r2,[svvptr,#wsvSystemControl]
@@ -678,10 +669,17 @@ checkScanlineIRQ:
 	subseq r1,r1,#64
 	subsne r1,r1,#1
 	str r1,[svvptr,#wsvTimerValue]
-	bpl noHBlIrq
-	orr r0,r0,#0x01				;@ #0 = Timer IRQ
-noHBlIrq:
+	ldrb r0,[svvptr,#wsvIRQStatus]
+	orrcc r0,r0,#0x01				;@ #0 = Timer IRQ
 	bl svSetInterruptStatus
+
+	ldr r1,[svvptr,#wsvNMITimer]
+	adds r1,r1,CYCLE_PSL<<16
+	str r1,[svvptr,#wsvNMITimer]
+	ldrb r0,[svvptr,#wsvNMIStatus]
+	orrcs r0,r0,#1
+	bicvs r0,r0,#1
+	bl svSetNMIStatus
 
 	ldr r0,[svvptr,#scanline]
 	subs r0,r0,#157				;@ Return from emulation loop on this scanline
@@ -699,34 +697,36 @@ svUpdateIrqEnable:
 	ldrb r1,[svvptr,#wsvSystemControl]
 	and r0,r0,r1,lsr#1
 	ldr pc,[svvptr,#irqFunction]
-
+;@----------------------------------------------------------------------------
+svSetNMIStatus:		;@ r0 = NMI status, 0=off, 1=on
+;@----------------------------------------------------------------------------
+	ldrb r2,[svvptr,#wsvNMIStatus]
+	cmp r0,r2
+	bxeq lr
+	strb r0,[svvptr,#wsvNMIStatus]
+svUpdateNMIEnable:
+	ldrb r1,[svvptr,#wsvSystemControl]
+	and r0,r0,r1
+	ldr pc,[svvptr,#nmiFunction]
 ;@----------------------------------------------------------------------------
 copyScrollValues:			;@ r0 = destination
 ;@----------------------------------------------------------------------------
-	stmfd sp!,{r4-r6}
-	ldr r1,[svvptr,#scrollBuff]
-
 	mov r2,#(SCREEN_HEIGHT-GAME_HEIGHT)/2
-	add r0,r0,r2,lsl#3			;@ 8 bytes per row
-	mov r3,#0x100-(SCREEN_WIDTH-GAME_WIDTH)/2
-	sub r3,r3,r2,lsl#16
-	ldr r4,=0x00FF00FF
+	add r0,r0,r2,lsl#2			;@ 4 bytes per row
+	mov r1,#0x100-(SCREEN_WIDTH-GAME_WIDTH)/2
+	sub r1,r1,r2,lsl#16
+
+	ldrb r2,[svvptr,#wsvXScroll]
+	add r1,r1,r2
+	ldrb r2,[svvptr,#wsvYScroll]
+	add r1,r1,r2,lsl#16
+
 	mov r2,#GAME_HEIGHT
 setScrlLoop:
-	ldr r5,[r1],#4
-	mov r6,r5,lsr#16
-	mov r5,r5,lsl#16
-	orr r6,r6,r6,lsl#8
-	orr r5,r5,r5,lsr#8
-	and r6,r4,r6
-	and r5,r4,r5,lsr#8
-	add r6,r6,r3
-	add r5,r5,r3
-	stmia r0!,{r5,r6}
+	stmia r0!,{r1}
 	subs r2,r2,#1
 	bne setScrlLoop
 
-	ldmfd sp!,{r4-r6}
 	bx lr
 
 ;@----------------------------------------------------------------------------
@@ -737,7 +737,7 @@ svConvertScreen:	;@ In r0 = dest
 	ldr r4,=CHR_DECODE
 	ldr r2,[svvptr,#gfxRAM]
 
-	mov r7,#20				;@ 20 tiles high screen
+	mov r7,#21				;@ 21 tiles high screen
 scLoop:
 	mov r6,#8				;@ 8 pix high tiles
 tiLoop:

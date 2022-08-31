@@ -83,15 +83,16 @@ wsvPadding3:		.byte 0		;@ 0x2F ???
 
 
 ;@----------------------------------------------------------------------------
-wsvTimerLatch:		.long 0
+wsvNMITimer:		.long 0
 wsvTimerValue:		.long 0
 sndDmaSource:		.long 0		;@ Original Sound DMA source address
 sndDmaLength:		.long 0		;@ Original Sound DMA length
 
+wsvNMIStatus:		.byte 0		;@ NMI Status
 wsvSOC:				.byte 0		;@ ASWAN or KS5360
 wsvLatchedDispCtrl:	.byte 0		;@ Latched Display Control
 wsvLowBattery:		.byte 0
-wsvPadding4:		.space 1
+wsvPadding4:		.space 4
 
 scrollLine: 		.long 0		;@ Last line scroll was updated.
 ks5360StateEnd:

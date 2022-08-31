@@ -86,15 +86,16 @@ typedef struct {
 	u8 wsvPadding3;				// 0x2F ???
 
 //------------------------------
-	u32 wsvTimerLatch;
+	u32 wsvNMITimer;
 	u32 wsvTimerValue;
 	u32 sndDmaSource;			// Original Sound DMA source address
 	u32 sndDmaLength;			// Original Sound DMA length
 
+	u8 wsvNMIStatus;			// NMI pin out status
 	u8 wsvSOC;					// ASWAN or KS5360
 	u8 wsvLatchedDispCtrl;		// Latched Display Control
 	u8 wsvLowBattery;
-	u8 wsvPadding13[1];
+	u8 wsvPadding13[4];
 
 	u32 scrollLine;
 
