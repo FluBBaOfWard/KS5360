@@ -275,7 +275,7 @@ io_read_tbl:
 	.long svUnknownR
 	.long svUnknownR	;@ 0x2018
 	.long svUnknownR
-	.long svUnknownR
+	.long _201Ar
 	.long svUnknownR
 	.long svUnknownR
 	.long svUnknownR
@@ -319,16 +319,25 @@ svImportantR:
 	ldmfd sp!,{r0,svvptr,lr}
 ;@----------------------------------------------------------------------------
 svRegR:
-//	add r2,svvptr,#wsvRegs
-//	ldrb r0,[r2,r0]
-	mov r0,#0
+	and r0,r0,#0xFF
+	add r2,svvptr,#wsvRegs
+	ldrb r0,[r2,r0]
 	bx lr
 	.pool
 
 ;@----------------------------------------------------------------------------
+_201Ar:		;@ Channel 3 Length
+;@----------------------------------------------------------------------------
+	ldrb r0,[svvptr,#sndDmaLength+3]
+	bx lr
+;@----------------------------------------------------------------------------
 _2021r:		;@ Link Port DDR read
 ;@----------------------------------------------------------------------------
 	ldrb r0,[svvptr,#wsvLinkPortDDR]
+	ldrb r1,[svvptr,#wsvLinkPortData]
+	bic r0,r0,#0x0F
+	and r1,r1,#0x0F
+	orr r0,r0,r1
 	bx lr
 ;@----------------------------------------------------------------------------
 _2022r:		;@ Link Port Data read
@@ -352,7 +361,7 @@ _2024r:		;@ Timer IRQ clear
 	ldmfd sp!,{lr}
 	bx lr
 ;@----------------------------------------------------------------------------
-_2025r:		;@ DMA IRQ clear?
+_2025r:		;@ DMA IRQ clear
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{lr}
 	ldrb r0,[svvptr,#wsvIRQStatus]
@@ -396,19 +405,19 @@ io_write_tbl:
 	.long _200Dw
 	.long _200Ew
 	.long _200Fw
-	.long wsvImportantW		;@ Sound...
+	.long wsvRegW		;@ Sound...
+	.long wsvRegW
+	.long wsvRegW
+	.long wsvRegW
+	.long wsvRegW
+	.long wsvRegW
+	.long wsvRegW
+	.long wsvRegW
 	.long wsvImportantW
 	.long wsvImportantW
+	.long _201Aw
 	.long wsvImportantW
-	.long wsvImportantW
-	.long wsvImportantW
-	.long wsvImportantW
-	.long wsvImportantW
-	.long wsvImportantW
-	.long wsvImportantW
-	.long wsvImportantW
-	.long wsvImportantW
-	.long wsvImportantW
+	.long wsvRegW		;@ Sound DMA trigger
 	.long wsvImportantW
 	.long wsvImportantW
 	.long wsvImportantW
@@ -447,6 +456,7 @@ wsvUnmappedW:
 	b _debugIOUnmappedW
 ;@----------------------------------------------------------------------------
 wsvRegW:
+	and r0,r0,#0xFF
 	add r2,svvptr,#wsvRegs
 	strb r1,[r2,r0]
 	bx lr
@@ -486,6 +496,15 @@ _2003w:
 _200Dw:		;@ DMA trigger
 _200Ew:		;@ TV link palette?
 _200Fw:		;@ TV link something
+	bx lr
+
+
+;@----------------------------------------------------------------------------
+_201Aw:		;@ Channel 3 Length
+;@----------------------------------------------------------------------------
+	strb r1,[svvptr,#wsvCh3Len]
+	mov r1,r1,lsl#24
+	str r1,[svvptr,#sndDmaLength]
 	bx lr
 ;@----------------------------------------------------------------------------
 _2021w:		;@ IO port write
@@ -681,6 +700,27 @@ checkScanlineIRQ:
 	bicvs r0,r0,#1
 	bl svSetNMIStatus
 
+	ldrb r0,[svvptr,#wsvCh3Trigg]
+	tst r0,#0x80
+	beq noSoundDMA
+	ldr r0,[svvptr,#sndDmaCounter]
+	mov r1,CYCLE_PSL<<23
+	ldrb r2,[svvptr,#wsvCh3Ctrl]
+	and r2,r2,#3				;@ Sound DMA speed
+	subs r0,r0,r1,lsr r2
+	str r0,[svvptr,#sndDmaCounter]
+	bcs noSoundDMA
+	ldr r0,[svvptr,#sndDmaLength]
+	subs r0,r0,#0x00100000
+	str r0,[svvptr,#sndDmaLength]
+	bhi noSoundDMA
+	mov r0,#0
+	strb r0,[svvptr,#wsvCh3Trigg]
+	ldrb r0,[svvptr,#wsvIRQStatus]
+	orr r0,r0,#0x02				;@ #1 = Sound IRQ
+	bl svSetInterruptStatus
+noSoundDMA:
+
 	ldr r0,[svvptr,#scanline]
 	subs r0,r0,#157				;@ Return from emulation loop on this scanline
 	movne r0,#1
@@ -732,10 +772,11 @@ setScrlLoop:
 ;@----------------------------------------------------------------------------
 svConvertScreen:	;@ In r0 = dest
 ;@----------------------------------------------------------------------------
-	stmfd sp!,{r3-r7}
+	stmfd sp!,{r3-r7,lr}
 
+	ldr r1,[svvptr,#gfxRAM]	;@ Source
 	ldr r4,=CHR_DECODE
-	ldr r2,[svvptr,#gfxRAM]
+	ldr lr,=0x1FE
 
 	mov r7,#21				;@ 21 tiles high screen
 scLoop:
@@ -743,19 +784,17 @@ scLoop:
 tiLoop:
 	mov r5,#24				;@ 24*8=192 pix
 rwLoop:
-	ldrb r3,[r2],#1			;@ Read 4 1st pixels
-	mov r3,r3,lsl#1
+	ldrh r3,[r1],#2			;@ Read 8 pixels
+	and r2,lr,r3,lsl#1
+	ldrh r2,[r4,r2]
+	and r3,lr,r3,lsr#7
 	ldrh r3,[r4,r3]
-	ldrb r1,[r2],#1			;@ Read 4 more pixels
-	mov r1,r1,lsl#1
-	ldrh r1,[r4,r1]
-	orr r3,r3,r1,lsl#16
+	orr r3,r2,r3,lsl#16
 	str r3,[r0],#32
 	subs r5,r5,#1
 	bne rwLoop
 
-	sub r0,r0,#32*24
-	add r0,r0,#4
+	sub r0,r0,#32*24-4
 	subs r6,r6,#1
 	bne tiLoop
 
@@ -763,9 +802,7 @@ rwLoop:
 	subs r7,r7,#1
 	bne scLoop
 
-	ldmfd sp!,{r3-r7}
-	bx lr
-
+	ldmfd sp!,{r3-r7,pc}
 
 ;@----------------------------------------------------------------------------
 #ifdef GBA

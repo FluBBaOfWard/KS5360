@@ -39,8 +39,10 @@ wsvMirr01:			.byte 0		;@ 0x05 Mirror of reg 0x01
 wsvMirr02:			.byte 0		;@ 0x06 Mirror of reg 0x02
 wsvMirr03:			.byte 0		;@ 0x07 Mirror of reg 0x03
 
+wsvDMASrc:
 wsvDMASrcLow:		.byte 0		;@ 0x08 DMA Source Low
 wsvDMASrcHigh:		.byte 0		;@ 0x09 DMA Source High
+wsvDMADst:
 wsvDMADstLow:		.byte 0		;@ 0x0A DMA Destination Low
 wsvDMADstHigh:		.byte 0		;@ 0x0B DMA Destination High
 wsvDMALen:			.byte 0		;@ 0x0C DMA Length
@@ -85,8 +87,8 @@ wsvPadding3:		.byte 0		;@ 0x2F ???
 ;@----------------------------------------------------------------------------
 wsvNMITimer:		.long 0
 wsvTimerValue:		.long 0
-sndDmaSource:		.long 0		;@ Original Sound DMA source address
-sndDmaLength:		.long 0		;@ Original Sound DMA length
+sndDmaCounter:		.long 0		;@ Sound DMA Counter
+sndDmaLength:		.long 0		;@ Sound DMA length
 
 wsvNMIStatus:		.byte 0		;@ NMI Status
 wsvSOC:				.byte 0		;@ ASWAN or KS5360
