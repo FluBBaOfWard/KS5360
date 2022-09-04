@@ -45,24 +45,16 @@
 svVideoInit:				;@ Only need to be called once
 ;@----------------------------------------------------------------------------
 	mov r1,#0xffffff00			;@ Build chr decode tbl
-	ldr r2,=CHR_DECODE			;@ 0x200
+	ldr r3,=CHR_DECODE			;@ 0x200
 chrLutLoop:
-	and r0,r1,#0x01
-	tst r1,#0x02
-	orrne r0,r0,#0x0002
-	tst r1,#0x04
-	orrne r0,r0,#0x0010
-	tst r1,#0x08
-	orrne r0,r0,#0x0020
-	tst r1,#0x10
-	orrne r0,r0,#0x0100
-	tst r1,#0x20
-	orrne r0,r0,#0x0200
-	tst r1,#0x40
-	orrne r0,r0,#0x1000
-	tst r1,#0x80
-	orrne r0,r0,#0x2000
-	strh r0,[r2],#2
+	and r0,r1,#0x03
+	and r2,r1,#0x0C
+	orr r0,r0,r2,lsl#2
+	and r2,r1,#0x30
+	orr r0,r0,r2,lsl#4
+	and r2,r1,#0xC0
+	orr r0,r0,r2,lsl#6
+	strh r0,[r3],#2
 	adds r1,r1,#1
 	bne chrLutLoop
 
@@ -71,18 +63,12 @@ makeTileBgr:
 ;@----------------------------------------------------------------------------
 	mov r1,#BG_GFX
 	mov r0,#0
-	mov r2,#21
-oLoop:
-	mov r3,#24
+	mov r2,#32*22
 bgrLoop:
 	strh r0,[r1],#2
 	add r0,r0,#1
-	subs r3,r3,#1
-	bne bgrLoop
-	add r0,r0,#8
-	add r1,r1,#8*2
 	subs r2,r2,#1
-	bne oLoop
+	bne bgrLoop
 
 	bx lr
 ;@----------------------------------------------------------------------------
@@ -108,8 +94,6 @@ svVideoReset:		;@ r0=NmiFunc, r1=IrqFunc, r2=ram+LUTs, r3=SOC 0=mono,1=color,2=c
 	str r1,[svvptr,#irqFunction]
 
 	str r2,[svvptr,#gfxRAM]
-	add r0,r2,#0x2200
-	str r0,[svvptr,#paletteRAM]
 	ldr r0,=SCROLL_BUFF
 	str r0,[svvptr,#scrollBuff]
 
@@ -201,10 +185,6 @@ svVideoGetStateSize:	;@ Out r0=state size.
 	bx lr
 
 	.pool
-;@----------------------------------------------------------------------------
-#ifdef GBA
-	.section .ewram,"ax"
-#endif
 ;@----------------------------------------------------------------------------
 svBufferWindows:
 ;@----------------------------------------------------------------------------
@@ -402,9 +382,9 @@ io_write_tbl:
 	.long wsvImportantW
 	.long wsvImportantW
 	.long wsvImportantW
-	.long _200Dw
-	.long _200Ew
-	.long _200Fw
+	.long wsvImportantW
+	.long wsvImportantW
+	.long wsvImportantW
 	.long wsvRegW		;@ Sound...
 	.long wsvRegW
 	.long wsvRegW
@@ -494,6 +474,7 @@ _2003w:
 	bx lr
 ;@----------------------------------------------------------------------------
 _200Dw:		;@ DMA trigger
+
 _200Ew:		;@ TV link palette?
 _200Fw:		;@ TV link something
 	bx lr
@@ -633,12 +614,6 @@ endFrame:
 
 ;@----------------------------------------------------------------------------
 frameEndHook:
-	stmfd sp!,{lr}
-	mov r0,#0
-	mov lr,pc
-	ldr pc,[svvptr,#nmiFunction]
-	ldmfd sp!,{lr}
-
 	mov r0,#0
 	str r0,[svvptr,#scrollLine]
 
@@ -651,7 +626,7 @@ frameEndHook:
 ;@----------------------------------------------------------------------------
 lineStateTable:
 	.long 0, newFrame			;@ zeroLine
-	.long 158, endFrame			;@ After last visible scanline
+	.long 159, endFrame			;@ After last visible scanline
 lineStateLastLine:
 	.long 160, frameEndHook		;@ totalScanlines
 ;@----------------------------------------------------------------------------
@@ -704,8 +679,8 @@ checkScanlineIRQ:
 	tst r0,#0x80
 	beq noSoundDMA
 	ldr r0,[svvptr,#sndDmaCounter]
-	mov r1,CYCLE_PSL<<23
 	ldrb r2,[svvptr,#wsvCh3Ctrl]
+	mov r1,CYCLE_PSL<<23
 	and r2,r2,#3				;@ Sound DMA speed
 	subs r0,r0,r1,lsr r2
 	str r0,[svvptr,#sndDmaCounter]
@@ -722,7 +697,7 @@ checkScanlineIRQ:
 noSoundDMA:
 
 	ldr r0,[svvptr,#scanline]
-	subs r0,r0,#157				;@ Return from emulation loop on this scanline
+	subs r0,r0,#159				;@ Return from emulation loop on this scanline
 	movne r0,#1
 	ldmfd sp!,{pc}
 
@@ -758,12 +733,15 @@ copyScrollValues:			;@ r0 = destination
 
 	ldrb r2,[svvptr,#wsvXScroll]
 	add r1,r1,r2
-	ldrb r2,[svvptr,#wsvYScroll]
-	add r1,r1,r2,lsl#16
+	ldrb r3,[svvptr,#wsvYScroll]
+	add r1,r1,r3,lsl#16
 
 	mov r2,#GAME_HEIGHT
 setScrlLoop:
 	stmia r0!,{r1}
+	add r3,r3,#1
+	cmp r3,#0xAA		;@ 170
+	subeq r1,r1,#0x00AA0000
 	subs r2,r2,#1
 	bne setScrlLoop
 
@@ -772,29 +750,37 @@ setScrlLoop:
 ;@----------------------------------------------------------------------------
 svConvertScreen:	;@ In r0 = dest
 ;@----------------------------------------------------------------------------
-	stmfd sp!,{r3-r7,lr}
+	stmfd sp!,{r3-r8,lr}
 
 	ldr r1,[svvptr,#gfxRAM]	;@ Source
 	ldr r4,=CHR_DECODE
 	ldr lr,=0x1FE
+	ldrb r8,[svvptr,#wsvXScroll]
+	mov r8,r8,lsr#3
+	add r1,r1,r8,lsl#1
 
-	mov r7,#21				;@ 21 tiles high screen
+	mov r7,#22				;@ 22 tiles high screen
 scLoop:
 	mov r6,#8				;@ 8 pix high tiles
 tiLoop:
-	mov r5,#24				;@ 24*8=192 pix
+	mov r5,#21				;@ 21*8=168 pix
 rwLoop:
 	ldrh r3,[r1],#2			;@ Read 8 pixels
-	and r2,lr,r3,lsl#1
-	ldrh r2,[r4,r2]
-	and r3,lr,r3,lsr#7
-	ldrh r3,[r4,r3]
+	ands r2,lr,r3,lsl#1
+	ldrhne r2,[r4,r2]
+	ands r3,lr,r3,lsr#7
+	ldrhne r3,[r4,r3]
 	orr r3,r2,r3,lsl#16
-	str r3,[r0],#32
+	str r3,[r0,r8,lsl#5]
+	add r8,r8,#1
+	and r8,r8,#0x1F
 	subs r5,r5,#1
 	bne rwLoop
 
-	sub r0,r0,#32*24-4
+	add r8,r8,#11
+	and r8,r8,#0x1F
+	add r1,r1,#6
+	add r0,r0,#4
 	subs r6,r6,#1
 	bne tiLoop
 
@@ -802,7 +788,7 @@ rwLoop:
 	subs r7,r7,#1
 	bne scLoop
 
-	ldmfd sp!,{r3-r7,pc}
+	ldmfd sp!,{r3-r8,pc}
 
 ;@----------------------------------------------------------------------------
 #ifdef GBA

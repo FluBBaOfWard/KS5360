@@ -16,7 +16,7 @@ extern "C" {
 #define HW_AUTO              (0)
 #define HW_SUPERVISION       (1)
 #define HW_SUPERVISIONCOLOR  (2)
-#define HW_SELECT_END        (5)
+#define HW_SELECT_END        (3)
 
 #define SOC_ASWAN		(0)
 #define SOC_KS5360		(1)
@@ -104,7 +104,6 @@ typedef struct {
 
 	u8 dirtyTiles[4];
 	void *gfxRAM;
-	void *paletteRAM;
 	u32 *scrollBuff;
 
 } KS5360;

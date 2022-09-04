@@ -104,7 +104,6 @@ irqFunction:		.long 0		;@ IRQ function
 
 dirtyTiles:			.space 4
 gfxRAM:				.long 0		;@ 0x2000
-paletteRAM:			.long 0		;@ 0x0200
 scrollBuff:			.long 0
 
 ks5360Size:
