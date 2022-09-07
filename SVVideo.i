@@ -39,12 +39,12 @@ wsvMirr01:			.byte 0		;@ 0x05 Mirror of reg 0x01
 wsvMirr02:			.byte 0		;@ 0x06 Mirror of reg 0x02
 wsvMirr03:			.byte 0		;@ 0x07 Mirror of reg 0x03
 
-wsvDMASrc:
-wsvDMASrcLow:		.byte 0		;@ 0x08 DMA Source Low
-wsvDMASrcHigh:		.byte 0		;@ 0x09 DMA Source High
-wsvDMADst:
-wsvDMADstLow:		.byte 0		;@ 0x0A DMA Destination Low
-wsvDMADstHigh:		.byte 0		;@ 0x0B DMA Destination High
+wsvDMACBus:
+wsvDMACBusLow:		.byte 0		;@ 0x08 DMA CBus Low
+wsvDMACBusHigh:		.byte 0		;@ 0x09 DMA CBus High
+wsvDMAVBus:
+wsvDMAVBusLow:		.byte 0		;@ 0x0A DMA VBus Low
+wsvDMAVBusHigh:		.byte 0		;@ 0x0B DMA VBus High
 wsvDMALen:			.byte 0		;@ 0x0C DMA Length
 wsvDMACtrl:			.byte 0		;@ 0x0D DMA Control
 

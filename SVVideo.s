@@ -327,8 +327,7 @@ _2022r:		;@ Link Port Data read
 ;@----------------------------------------------------------------------------
 _2023r:		;@ Timer value
 ;@----------------------------------------------------------------------------
-	ldr r0,[svvptr,#wsvTimerValue]
-	mov r0,r0,lsr#6
+	ldrb r0,[svvptr,#wsvTimerValue+3]
 	bx lr
 ;@----------------------------------------------------------------------------
 _2024r:		;@ Timer IRQ clear
@@ -382,7 +381,7 @@ io_write_tbl:
 	.long wsvImportantW
 	.long wsvImportantW
 	.long wsvImportantW
-	.long wsvImportantW
+	.long wsvDMACtrlW
 	.long wsvImportantW
 	.long wsvImportantW
 	.long wsvRegW		;@ Sound...
@@ -450,7 +449,7 @@ _2000w:
 _2001w:
 ;@----------------------------------------------------------------------------
 ;@----------------------------------------------------------------------------
-svRefW:					;@ 0x2001, Last scan line.
+svRefW:						;@ 0x2001, Last scan line.
 ;@----------------------------------------------------------------------------
 	strb r1,[svvptr,#wsvLCDYSize]
 	cmp r1,#0x9E
@@ -473,8 +472,64 @@ _2003w:
 	strb r1,[svvptr,#wsvYScroll]
 	bx lr
 ;@----------------------------------------------------------------------------
-_200Dw:		;@ DMA trigger
+wsvDMACtrlW:				;@ 0x200D
+;@----------------------------------------------------------------------------
+	strb r1,[svvptr,#wsvDMACtrl]
+	tst r1,#0x80				;@ Start?
+	bxeq lr
 
+	stmfd sp!,{r4-r7,lr}
+	mov r7,svvptr
+	ldrh r4,[svvptr,#wsvDMACBus]
+	mov r4,r4,lsl#16
+
+	ldrh r5,[svvptr,#wsvDMAVBus];@ r5=destination
+	mov r5,r5,ror#13
+
+	ldrb r6,[svvptr,#wsvDMALen]	;@ r6=length
+	mov r6,r6,lsl#24
+	sub cycles,cycles,r6,lsl#CYC_SHIFT
+	tst r5,#2					;@ From VBus to CBus?
+	beq dmaFromVRAMLoop
+
+dmaToVRAMLoop:
+	mov addy,r4,lsr#16
+	bl memRead8
+	add r1,m6502zpage,#0x2000
+	strb r0,[r1,r5,lsr#19]
+	add r4,r4,#0x10000
+	add r5,r5,#0x80000
+	subs r6,r6,#0x00100000
+	bne dmaToVRAMLoop
+	b dmaEnd
+
+dmaFromVRAMLoop:
+	add r1,m6502zpage,#0x2000
+	ldrb r0,[r1,r5,lsr#19]
+	mov addy,r4,lsr#16
+	bl memWrite8
+	add r4,r4,#0x10000
+	add r5,r5,#0x80000
+	subs r6,r6,#0x00100000
+	bne dmaFromVRAMLoop
+
+dmaEnd:
+	mov svvptr,r7
+	mov r4,r4,lsr#16
+	strh r4,[svvptr,#wsvDMACBus]
+	mov r5,r5,ror#19
+	strh r5,[svvptr,#wsvDMAVBus]
+
+	mov r6,r6,lsr#24
+	strb r6,[svvptr,#wsvDMALen]
+	mov r0,#0x00
+	strb r0,[svvptr,#wsvDMACtrl]
+
+	ldmfd sp!,{r4-r7,lr}
+	bx lr
+
+
+;@----------------------------------------------------------------------------
 _200Ew:		;@ TV link palette?
 _200Fw:		;@ TV link something
 	bx lr
@@ -501,8 +556,7 @@ _2022w:		;@ Link Port Data write
 _2023w:		;@ Timer value
 ;@----------------------------------------------------------------------------
 	strb r1,[svvptr,#wsvIRQTimer]
-	mov r1,r1,lsl#6
-	str r1,[svvptr,#wsvTimerValue]
+	strb r1,[svvptr,#wsvTimerValue+3]
 	bx lr
 ;@----------------------------------------------------------------------------
 _2024w:		;@ Timer IRQ clear
@@ -551,52 +605,6 @@ ct1:
 ctrl1Old:	.long 0x2840	;@ Last write
 ctrl1Line:	.long 0 		;@ When?
 
-
-;@----------------------------------------------------------------------------
-wsvDMACtrlW:				;@ 0x48, only WSC, word transfer. steals 5+2n cycles.
-;@----------------------------------------------------------------------------
-	and r1,r1,#0xC0
-	strb r1,[svvptr,#wsvDMACtrl]
-	tst r1,#0x80				;@ Start?
-	bxeq lr
-
-	stmfd sp!,{r4-r8,lr}
-	and r8,r1,#0x40				;@ Inc/dec
-	rsb r8,r8,#0x20
-	mov r7,svvptr
-	ldrh r4,[svvptr,#wsvDMASrcLow]
-
-	ldrh r5,[svvptr,#wsvDMADstLow];@ r5=destination
-	mov r5,r5,lsl#16
-
-	sub cycles,cycles,#5*CYCLE
-	ldrb r6,[svvptr,#wsvDMALen]	;@ r6=length
-	mov r6,r6,lsl#7
-	sub cycles,cycles,r6,lsl#CYC_SHIFT
-
-dmaLoop:
-	mov r0,r4,lsl#12
-//	bl readMem20W
-	mov r1,r0
-	mov r0,r5,lsr#4
-//	bl writeMem20W
-	add r4,r4,r8,asr#4
-	add r5,r5,r8,lsl#12
-	subs r6,r6,#2
-	bne dmaLoop
-
-	mov svvptr,r7
-	strh r4,[svvptr,#wsvDMASrcLow]
-	mov r5,r5,lsr#16
-	strh r5,[svvptr,#wsvDMADstLow]
-
-	strb r6,[svvptr,#wsvDMALen]
-	rsb r8,r8,#0x20
-	strb r8,[svvptr,#wsvDMACtrl]
-dmaEnd:
-
-	ldmfd sp!,{r4-r8,lr}
-	bx lr
 
 ;@----------------------------------------------------------------------------
 newFrame:					;@ Called before line 0
@@ -658,14 +666,20 @@ checkScanlineIRQ:
 	stmfd sp!,{lr}
 
 	ldr r1,[svvptr,#wsvTimerValue]
+	tst r1,#0xFF000000
+	beq noTimerCount
 	ldrb r2,[svvptr,#wsvSystemControl]
 	tst r2,#0x10
-	subseq r1,r1,#64
-	subsne r1,r1,#1
+	moveq r0,#CYCLE_PSL<<16
+	movne r0,#CYCLE_PSL<<10
+	subs r1,r1,r0
+	biccc r1,r1,#0xFF000000
+	tst r1,#0xFF000000
 	str r1,[svvptr,#wsvTimerValue]
 	ldrb r0,[svvptr,#wsvIRQStatus]
-	orrcc r0,r0,#0x01				;@ #0 = Timer IRQ
+	orreq r0,r0,#0x01				;@ #0 = Timer IRQ
 	bl svSetInterruptStatus
+noTimerCount:
 
 	ldr r1,[svvptr,#wsvNMITimer]
 	adds r1,r1,CYCLE_PSL<<16
@@ -680,7 +694,7 @@ checkScanlineIRQ:
 	beq noSoundDMA
 	ldr r0,[svvptr,#sndDmaCounter]
 	ldrb r2,[svvptr,#wsvCh3Ctrl]
-	mov r1,CYCLE_PSL<<23
+	mov r1,CYCLE_PSL<<15
 	and r2,r2,#3				;@ Sound DMA speed
 	subs r0,r0,r1,lsr r2
 	str r0,[svvptr,#sndDmaCounter]
@@ -771,14 +785,13 @@ rwLoop:
 	ands r3,lr,r3,lsr#7
 	ldrhne r3,[r4,r3]
 	orr r3,r2,r3,lsl#16
+	and r8,r8,#0x1F
 	str r3,[r0,r8,lsl#5]
 	add r8,r8,#1
-	and r8,r8,#0x1F
 	subs r5,r5,#1
 	bne rwLoop
 
 	add r8,r8,#11
-	and r8,r8,#0x1F
 	add r1,r1,#6
 	add r0,r0,#4
 	subs r6,r6,#1
