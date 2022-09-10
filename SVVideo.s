@@ -704,7 +704,7 @@ noTimerCount:
 	beq noSoundDMA
 	ldr r0,[svvptr,#sndDmaCounter]
 	ldrb r2,[svvptr,#wsvCh3Ctrl]
-	mov r1,CYCLE_PSL<<15
+	mov r1,CYCLE_PSL<<23
 	and r2,r2,#3				;@ Sound DMA speed
 	subs r0,r0,r1,lsr r2
 	str r0,[svvptr,#sndDmaCounter]
@@ -712,8 +712,7 @@ noTimerCount:
 	ldr r0,[svvptr,#sndDmaLength]
 	subs r0,r0,#0x00100000
 	str r0,[svvptr,#sndDmaLength]
-	bhi noSoundDMA
-	mov r0,#0
+	bne noSoundDMA
 	strb r0,[svvptr,#wsvCh3Trigg]
 	ldrb r0,[svvptr,#wsvIRQStatus]
 	orr r0,r0,#0x02				;@ #1 = Sound IRQ
@@ -758,6 +757,9 @@ copyScrollValues:			;@ r0 = destination
 	ldrb r2,[svvptr,#wsvXScroll]
 	add r1,r1,r2
 	ldrb r3,[svvptr,#wsvYScroll]
+	cmp r3,#0xAB		;@ 170
+	subpl r3,#0xAB
+	addpl r1,r1,#0x40
 	add r1,r1,r3,lsl#16
 
 	mov r2,#GAME_HEIGHT
@@ -780,6 +782,9 @@ svConvertScreen:	;@ In r0 = dest
 	ldr r4,=CHR_DECODE
 	ldr lr,=0x1FE
 	ldrb r8,[svvptr,#wsvXScroll]
+	ldrb r2,[svvptr,#wsvYScroll]
+	cmp r2,#0xAB		;@ 171
+	addpl r8,r8,#0x40
 	mov r8,r8,lsr#3
 	add r1,r1,r8,lsl#1
 
