@@ -227,9 +227,9 @@ svRead:		;@ I/O read
 	sub r2,r0,#0x2000
 	cmp r2,#0x30
 	ldrmi pc,[pc,r2,lsl#2]
-	b svWSUnmappedR
+	b svUnmappedR
 io_read_tbl:
-	.long svUnknownR	;@ 0x2000
+	.long svUnknownR		;@ 0x2000
 	.long svUnknownR
 	.long svUnknownR
 	.long svUnknownR
@@ -237,7 +237,7 @@ io_read_tbl:
 	.long svUnknownR
 	.long svUnknownR
 	.long svUnknownR
-	.long svUnknownR	;@ 0x2008
+	.long svUnknownR		;@ 0x2008
 	.long svUnknownR
 	.long svUnknownR
 	.long svUnknownR
@@ -245,7 +245,7 @@ io_read_tbl:
 	.long svUnknownR
 	.long svUnknownR
 	.long svUnknownR
-	.long svUnknownR	;@ 0x2010
+	.long svUnknownR		;@ 0x2010
 	.long svUnknownR
 	.long svUnknownR
 	.long svUnknownR
@@ -253,7 +253,7 @@ io_read_tbl:
 	.long svUnknownR
 	.long svUnknownR
 	.long svUnknownR
-	.long svUnknownR	;@ 0x2018
+	.long svUnknownR		;@ 0x2018
 	.long svUnknownR
 	.long _201Ar
 	.long svUnknownR
@@ -261,14 +261,14 @@ io_read_tbl:
 	.long svUnknownR
 	.long svUnknownR
 	.long svUnknownR
-	.long joy0_R		;@ 2020: joypad
-	.long _2021r		;@ IO port read
-	.long _2022r
-	.long _2023r		;@ Timer value
-	.long _2024r
-	.long _2025r
-	.long _2026r
-	.long _2027r
+	.long joy0_R			;@ 2020 joypad
+	.long svLinkPortDDRR	;@ 2021 Link Port DDR
+	.long svLinkPortDataR	;@ 2022 Link Port Data
+	.long svTimerValueR		;@ 2023 Timer Value
+	.long svTimerIRQClear	;@ 2024 Timer IRQ Clear
+	.long svDMAIRQClear		;@ 2025 DMA IRQ Clear
+	.long _2026r			;@ System Control
+	.long _2027r			;@ IRQ Status
 	.long svUnknownR
 	.long svUnknownR
 	.long svUnknownR
@@ -279,7 +279,7 @@ io_read_tbl:
 	.long svUnknownR
 
 ;@----------------------------------------------------------------------------
-svWSUnmappedR:
+svUnmappedR:
 ;@----------------------------------------------------------------------------
 	mov r11,r11					;@ No$GBA breakpoint
 	stmfd sp!,{svvptr,lr}
@@ -311,26 +311,20 @@ _201Ar:		;@ Channel 3 Length
 	ldrb r0,[svvptr,#sndDmaLength+3]
 	bx lr
 ;@----------------------------------------------------------------------------
-_2021r:		;@ Link Port DDR read
+svLinkPortDDRR:		;@ 2021
 ;@----------------------------------------------------------------------------
-	ldrb r0,[svvptr,#wsvLinkPortDDR]
-	ldrb r1,[svvptr,#wsvLinkPortData]
-	bic r0,r0,#0x0F
-	and r1,r1,#0x0F
-	orr r0,r0,r1
+;@----------------------------------------------------------------------------
+svLinkPortDataR:	;@ 2022
+;@----------------------------------------------------------------------------
+	ldrb r0,[svvptr,#wsvLinkPortVal]
 	bx lr
 ;@----------------------------------------------------------------------------
-_2022r:		;@ Link Port Data read
-;@----------------------------------------------------------------------------
-	ldrb r0,[svvptr,#wsvLinkPortData]
-	bx lr
-;@----------------------------------------------------------------------------
-_2023r:		;@ Timer value
+svTimerValueR:		;@ 2023
 ;@----------------------------------------------------------------------------
 	ldrb r0,[svvptr,#wsvTimerValue+3]
 	bx lr
 ;@----------------------------------------------------------------------------
-_2024r:		;@ Timer IRQ clear
+svTimerIRQClear:	;@ 2024
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{lr}
 	ldrb r0,[svvptr,#wsvIRQStatus]
@@ -340,7 +334,7 @@ _2024r:		;@ Timer IRQ clear
 	ldmfd sp!,{lr}
 	bx lr
 ;@----------------------------------------------------------------------------
-_2025r:		;@ DMA IRQ clear
+svDMAIRQClear:		;@ 2025
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{lr}
 	ldrb r0,[svvptr,#wsvIRQStatus]
@@ -384,7 +378,7 @@ io_write_tbl:
 	.long wsvDMACtrlW
 	.long wsvImportantW
 	.long wsvImportantW
-	.long wsvRegW		;@ Sound...
+	.long wsvRegW			;@ Sound...
 	.long wsvRegW
 	.long wsvRegW
 	.long wsvRegW
@@ -396,19 +390,19 @@ io_write_tbl:
 	.long wsvImportantW
 	.long _201Aw
 	.long wsvImportantW
-	.long wsvRegW		;@ Sound DMA trigger
+	.long wsvRegW			;@ Sound DMA trigger
 	.long wsvImportantW
 	.long wsvImportantW
 	.long wsvImportantW
 	.long wsvImportantW
-	.long wsvImportantW
-	.long _2022w		;@ IO port write
-	.long _2023w		;@ Timer value
-	.long _2024w		;@ Timer IRQ clear
-	.long wsvImportantW
-	.long _2026w		;@ LCD & IRQs
+	.long _2021w			;@ IO port DDR
+	.long _2022w			;@ IO port data
+	.long wsvTimerValueW	;@ Timer value
+	.long wsvTimerIRQClearW	;@ Timer IRQ clear
+	.long wsvSoundIRQClearW	;@ Sound IRQ clear
+	.long _2026w			;@ LCD & IRQs
 	.long wsvUnmappedW
-	.long wsvImportantW	;@ Sound DMA...
+	.long wsvImportantW		;@ Sound DMA...
 	.long wsvImportantW
 	.long wsvImportantW
 	.long wsvImportantW
@@ -528,12 +522,10 @@ dmaEnd:
 	ldmfd sp!,{r4-r7,lr}
 	bx lr
 
-
 ;@----------------------------------------------------------------------------
 _200Ew:		;@ TV link palette?
 _200Fw:		;@ TV link something
 	bx lr
-
 
 ;@----------------------------------------------------------------------------
 _201Aw:		;@ Channel 3 Length
@@ -543,26 +535,32 @@ _201Aw:		;@ Channel 3 Length
 	str r1,[svvptr,#sndDmaLength]
 	bx lr
 ;@----------------------------------------------------------------------------
-_2021w:		;@ IO port write
+_2021w:		;@ Link Port DDR write
 ;@----------------------------------------------------------------------------
 	strb r1,[svvptr,#wsvLinkPortDDR]
-	bx lr
+	b handleLinkPort
 ;@----------------------------------------------------------------------------
 _2022w:		;@ Link Port Data write
 ;@----------------------------------------------------------------------------
 	strb r1,[svvptr,#wsvLinkPortData]
-	bx lr
+	b handleLinkPort
 ;@----------------------------------------------------------------------------
-_2023w:		;@ Timer value
+wsvTimerValueW:		;@ 0x2023
 ;@----------------------------------------------------------------------------
 	strb r1,[svvptr,#wsvIRQTimer]
 	strb r1,[svvptr,#wsvTimerValue+3]
 	bx lr
 ;@----------------------------------------------------------------------------
-_2024w:		;@ Timer IRQ clear
+wsvTimerIRQClearW:	;@ 0x2024
 ;@----------------------------------------------------------------------------
 	ldrb r0,[svvptr,#wsvIRQStatus]
 	bic r0,r0,#1
+	b svSetInterruptStatus
+;@----------------------------------------------------------------------------
+wsvSoundIRQClearW:	;@ 0x2025
+;@----------------------------------------------------------------------------
+	ldrb r0,[svvptr,#wsvIRQStatus]
+	bic r0,r0,#2
 	b svSetInterruptStatus
 ;@----------------------------------------------------------------------------
 _2026w:		;@ LCD & IRQs
@@ -571,9 +569,8 @@ _2026w:		;@ LCD & IRQs
 	strb r1,[svvptr,#wsvSystemControl]
 	eor r0,r0,r1
 	tst r0,#0xE0
-	movne r1,r1,lsr#5
 	stmfd sp!,{lr}
-	blne BankSwitch89AB_W
+	blne memoryMap89AB
 	ldrb r0,[svvptr,#wsvIRQStatus]
 	bl svUpdateIrqEnable
 	ldmfd sp!,{lr}
@@ -606,6 +603,19 @@ ctrl1Old:	.long 0x2840	;@ Last write
 ctrl1Line:	.long 0 		;@ When?
 
 
+;@----------------------------------------------------------------------------
+handleLinkPort:
+;@----------------------------------------------------------------------------
+	ldrb r0,[svvptr,#wsvLinkPortData]
+	ldrb r1,[svvptr,#wsvLinkPortDDR]
+	orr r0,r0,r1
+	strb r0,[svvptr,#wsvLinkPortVal]
+	ldrb r1,[svvptr,#wsvSystemControl]
+;@----------------------------------------------------------------------------
+memoryMap89AB:
+;@----------------------------------------------------------------------------
+	ldrb r0,[svvptr,#wsvLinkPortVal]
+	b bankSwitchCart
 ;@----------------------------------------------------------------------------
 newFrame:					;@ Called before line 0
 ;@----------------------------------------------------------------------------

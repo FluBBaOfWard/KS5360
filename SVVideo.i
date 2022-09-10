@@ -91,10 +91,11 @@ sndDmaCounter:		.long 0		;@ Sound DMA Counter
 sndDmaLength:		.long 0		;@ Sound DMA length
 
 wsvNMIStatus:		.byte 0		;@ NMI Status
+wsvLinkPortVal:		.byte 0		;@ Link Port Value
 wsvSOC:				.byte 0		;@ ASWAN or KS5360
 wsvLatchedDispCtrl:	.byte 0		;@ Latched Display Control
 wsvLowBattery:		.byte 0
-wsvPadding4:		.space 4
+wsvPadding4:		.space 3
 
 scrollLine: 		.long 0		;@ Last line scroll was updated.
 ks5360StateEnd:

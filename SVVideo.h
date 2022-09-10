@@ -92,10 +92,11 @@ typedef struct {
 	u32 sndDmaLength;			// Original Sound DMA length
 
 	u8 wsvNMIStatus;			// NMI pin out status
+	u8 wsvLinkPortVal;			// Link Port Value
 	u8 wsvSOC;					// ASWAN or KS5360
 	u8 wsvLatchedDispCtrl;		// Latched Display Control
 	u8 wsvLowBattery;
-	u8 wsvPadding13[4];
+	u8 wsvPadding4[3];
 
 	u32 scrollLine;
 
