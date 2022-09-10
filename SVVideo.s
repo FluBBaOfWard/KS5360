@@ -480,9 +480,10 @@ wsvDMACtrlW:				;@ 0x200D
 	ldrh r5,[svvptr,#wsvDMAVBus];@ r5=destination
 	mov r5,r5,ror#13
 
-	ldrb r6,[svvptr,#wsvDMALen]	;@ r6=length
-	mov r6,r6,lsl#24
-	sub cycles,cycles,r6,lsl#CYC_SHIFT
+	ldrb r0,[svvptr,#wsvDMALen]	;@ r6=length
+	movs r6,r0,lsl#24
+	moveq r0,#0x100
+	sub cycles,cycles,r0,lsl#CYC_SHIFT+4
 	tst r5,#2					;@ From VBus to CBus?
 	beq dmaFromVRAMLoop
 
@@ -514,9 +515,8 @@ dmaEnd:
 	mov r5,r5,ror#19
 	strh r5,[svvptr,#wsvDMAVBus]
 
-	mov r6,r6,lsr#24
-	strb r6,[svvptr,#wsvDMALen]
 	mov r0,#0x00
+	strb r0,[svvptr,#wsvDMALen]
 	strb r0,[svvptr,#wsvDMACtrl]
 
 	ldmfd sp!,{r4-r7,lr}

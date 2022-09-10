@@ -1,1 +1,1 @@
-#define KS5360VERSION "V0.1.1"
+#define KS5360VERSION "V0.2.0"
