@@ -1,7 +1,8 @@
 KS5360 revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-
 
-V0.2.0 - 2022-09-10 (FluBBa)
+V0.2.0 - 2022-09-11 (FluBBa)
+	Added sound.
 	Fixed Vertical scrolling (SSSnake).
 	Fixed horizontal scrolling (Kitchen War).
 	Fixed sound DMA IRQ.

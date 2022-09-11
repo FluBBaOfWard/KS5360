@@ -127,15 +127,15 @@ thumbCallR3:
 ;@----------------------------------------------------------------------------
 	bx r3
 ;@----------------------------------------------------------------------------
-svRegistersReset:				;@ in r3=SOC
+svRegistersReset:			;@ in r3=SOC
 ;@----------------------------------------------------------------------------
 	adr r1,IO_Default
 	mov r2,#0x30
-	add r0,svvptr,#wsvRegs
+	add r0,svvptr,#svvRegs
 	stmfd sp!,{svvptr,lr}
 	bl memCopy
 	ldmfd sp!,{svvptr,lr}
-	ldrb r1,[svvptr,#wsvLCDYSize]
+	ldrb r1,[svvptr,#svvLCDVSize]
 	b svRefW
 
 ;@----------------------------------------------------------------------------
@@ -145,7 +145,7 @@ IO_Default:
 	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 
 ;@----------------------------------------------------------------------------
-svVideoSaveState:		;@ In r0=destination, r1=svvptr. Out r0=state size.
+svVideoSaveState:			;@ In r0=destination, r1=svvptr. Out r0=state size.
 	.type	svVideoSaveState STT_FUNC
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r4,r5,lr}
@@ -160,7 +160,7 @@ svVideoSaveState:		;@ In r0=destination, r1=svvptr. Out r0=state size.
 	mov r0,#ks5360StateEnd-ks5360State
 	bx lr
 ;@----------------------------------------------------------------------------
-svVideoLoadState:		;@ In r0=svvptr, r1=source. Out r0=state size.
+svVideoLoadState:			;@ In r0=svvptr, r1=source. Out r0=state size.
 	.type	svVideoLoadState STT_FUNC
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r4,r5,lr}
@@ -178,7 +178,7 @@ svVideoLoadState:		;@ In r0=svvptr, r1=source. Out r0=state size.
 
 	ldmfd sp!,{r4,r5,lr}
 ;@----------------------------------------------------------------------------
-svVideoGetStateSize:	;@ Out r0=state size.
+svVideoGetStateSize:		;@ Out r0=state size.
 	.type	svVideoGetStateSize STT_FUNC
 ;@----------------------------------------------------------------------------
 	mov r0,#ks5360StateEnd-ks5360State
@@ -222,62 +222,65 @@ svBufferWindows:
 	bx lr
 
 ;@----------------------------------------------------------------------------
-svRead:		;@ I/O read
+svRead:						;@ I/O read
 ;@----------------------------------------------------------------------------
 	sub r2,r0,#0x2000
 	cmp r2,#0x30
 	ldrmi pc,[pc,r2,lsl#2]
 	b svUnmappedR
 io_read_tbl:
-	.long svUnknownR		;@ 0x2000
+	.long svWriteOnlyR			;@ 0x2000
+	.long svWriteOnlyR
+	.long svWriteOnlyR
+	.long svWriteOnlyR
+	.long svWriteOnlyR
+	.long svWriteOnlyR
+	.long svWriteOnlyR
+	.long svWriteOnlyR
+	.long svWriteOnlyR			;@ 0x2008
+	.long svWriteOnlyR
+	.long svWriteOnlyR
+	.long svWriteOnlyR
+	.long svWriteOnlyR
+	.long svWriteOnlyR
 	.long svUnknownR
 	.long svUnknownR
-	.long svUnknownR
-	.long svUnknownR
-	.long svUnknownR
-	.long svUnknownR
-	.long svUnknownR
-	.long svUnknownR		;@ 0x2008
-	.long svUnknownR
-	.long svUnknownR
-	.long svUnknownR
-	.long svUnknownR
-	.long svUnknownR
-	.long svUnknownR
-	.long svUnknownR
-	.long svUnknownR		;@ 0x2010
-	.long svUnknownR
-	.long svUnknownR
-	.long svUnknownR
-	.long svUnknownR
-	.long svUnknownR
-	.long svUnknownR
-	.long svUnknownR
-	.long svUnknownR		;@ 0x2018
-	.long svUnknownR
+	.long svWriteOnlyR			;@ 0x2010
+	.long svWriteOnlyR
+	.long svWriteOnlyR
+	.long svWriteOnlyR
+	.long svWriteOnlyR
+	.long svWriteOnlyR
+	.long svWriteOnlyR
+	.long svWriteOnlyR
+	.long svWriteOnlyR			;@ 0x2018
+	.long svWriteOnlyR
 	.long _201Ar
+	.long svWriteOnlyR
 	.long svUnknownR
 	.long svUnknownR
 	.long svUnknownR
 	.long svUnknownR
-	.long svUnknownR
-	.long joy0_R			;@ 2020 joypad
-	.long svLinkPortDDRR	;@ 2021 Link Port DDR
-	.long svLinkPortDataR	;@ 2022 Link Port Data
-	.long svTimerValueR		;@ 2023 Timer Value
-	.long svTimerIRQClear	;@ 2024 Timer IRQ Clear
-	.long svDMAIRQClear		;@ 2025 DMA IRQ Clear
-	.long _2026r			;@ System Control
-	.long _2027r			;@ IRQ Status
-	.long svUnknownR
-	.long svUnknownR
-	.long svUnknownR
+	.long joy0_R				;@ 0x2020 Joypad
+	.long svLinkPortDDRR		;@ 0x2021 Link Port DDR
+	.long svLinkPortDataR		;@ 0x2022 Link Port Data
+	.long svTimerValueR			;@ 0x2023 Timer Value
+	.long svTimerIRQClear		;@ 0x2024 Timer IRQ Clear
+	.long svDMAIRQClear			;@ 0x2025 DMA IRQ Clear
+	.long svWriteOnlyR			;@ 0x2026 System Control
+	.long svIRQStatusR			;@ 0x2027 IRQ Status
+	.long svWriteOnlyR
+	.long svWriteOnlyR
+	.long svWriteOnlyR
 	.long svUnknownR
 	.long svUnknownR
 	.long svUnknownR
 	.long svUnknownR
 	.long svUnknownR
 
+;@----------------------------------------------------------------------------
+svWriteOnlyR:
+;@----------------------------------------------------------------------------
 ;@----------------------------------------------------------------------------
 svUnmappedR:
 ;@----------------------------------------------------------------------------
@@ -300,31 +303,31 @@ svImportantR:
 ;@----------------------------------------------------------------------------
 svRegR:
 	and r0,r0,#0xFF
-	add r2,svvptr,#wsvRegs
+	add r2,svvptr,#svvRegs
 	ldrb r0,[r2,r0]
 	bx lr
 	.pool
 
 ;@----------------------------------------------------------------------------
-_201Ar:		;@ Channel 3 Length
+_201Ar:						;@ Channel 3 Length
 ;@----------------------------------------------------------------------------
 	ldrb r0,[svvptr,#sndDmaLength+3]
 	bx lr
 ;@----------------------------------------------------------------------------
-svLinkPortDDRR:		;@ 2021
+svLinkPortDDRR:				;@ 2021
 ;@----------------------------------------------------------------------------
 ;@----------------------------------------------------------------------------
-svLinkPortDataR:	;@ 2022
+svLinkPortDataR:			;@ 2022
 ;@----------------------------------------------------------------------------
 	ldrb r0,[svvptr,#wsvLinkPortVal]
 	bx lr
 ;@----------------------------------------------------------------------------
-svTimerValueR:		;@ 2023
+svTimerValueR:				;@ 2023
 ;@----------------------------------------------------------------------------
 	ldrb r0,[svvptr,#wsvTimerValue+3]
 	bx lr
 ;@----------------------------------------------------------------------------
-svTimerIRQClear:	;@ 2024
+svTimerIRQClear:			;@ 2024
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{lr}
 	ldrb r0,[svvptr,#wsvIRQStatus]
@@ -334,7 +337,7 @@ svTimerIRQClear:	;@ 2024
 	ldmfd sp!,{lr}
 	bx lr
 ;@----------------------------------------------------------------------------
-svDMAIRQClear:		;@ 2025
+svDMAIRQClear:				;@ 2025
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{lr}
 	ldrb r0,[svvptr,#wsvIRQStatus]
@@ -344,108 +347,103 @@ svDMAIRQClear:		;@ 2025
 	ldmfd sp!,{lr}
 	bx lr
 ;@----------------------------------------------------------------------------
-_2026r:		;@ LCD & IRQs
-;@----------------------------------------------------------------------------
-	ldrb r0,[svvptr,#wsvSystemControl]
-	bx lr
-;@----------------------------------------------------------------------------
-_2027r:		;@ IRQ bits
+svIRQStatusR:				;@ 0x2027 IRQ bits
 ;@----------------------------------------------------------------------------
 	ldrb r0,[svvptr,#wsvIRQStatus]
 	bx lr
 
 ;@----------------------------------------------------------------------------
-svWrite:	;@ I/O write
+svWrite:					;@ I/O write
 ;@----------------------------------------------------------------------------
 	sub r2,r0,#0x2000
 	cmp r2,#0x30
 	ldrmi pc,[pc,r2,lsl#2]
-	b wsvUnmappedW
+	b svUnmappedW
 io_write_tbl:
-	.long _2000w			;@ Horizontal screen size
-	.long _2001w			;@ Vertical screen size
-	.long _2002w			;@ Horizontal scroll
-	.long _2003w			;@ Vertical scroll
-	.long _2000w
-	.long _2001w
-	.long _2002w
-	.long _2003w
-	.long wsvImportantW
-	.long wsvImportantW
-	.long wsvImportantW
-	.long wsvImportantW
-	.long wsvImportantW
-	.long wsvDMACtrlW
-	.long wsvImportantW
-	.long wsvImportantW
-	.long wsvRegW			;@ Sound...
-	.long wsvRegW
-	.long wsvRegW
-	.long wsvRegW
-	.long wsvRegW
-	.long wsvRegW
-	.long wsvRegW
-	.long wsvRegW
-	.long wsvImportantW
-	.long wsvImportantW
-	.long _201Aw
-	.long wsvImportantW
-	.long wsvRegW			;@ Sound DMA trigger
-	.long wsvImportantW
-	.long wsvImportantW
-	.long wsvImportantW
-	.long wsvImportantW
-	.long _2021w			;@ IO port DDR
-	.long _2022w			;@ IO port data
-	.long wsvTimerValueW	;@ Timer value
-	.long wsvTimerIRQClearW	;@ Timer IRQ clear
-	.long wsvSoundIRQClearW	;@ Sound IRQ clear
-	.long _2026w			;@ LCD & IRQs
-	.long wsvUnmappedW
-	.long wsvImportantW		;@ Sound DMA...
-	.long wsvImportantW
-	.long wsvImportantW
-	.long wsvImportantW
-	.long wsvImportantW
-	.long wsvImportantW
-	.long wsvImportantW
-	.long wsvImportantW
+	.long svHScrSizeW			;@ 0x2000 Horizontal Screen Size
+	.long svVScrSizeW			;@ 0x2001 Vertical Screen Size
+	.long svHScrollW			;@ 0x2002 Horizontal Scroll
+	.long svVScrollW			;@ 0x2003 Vertical Scroll
+	.long svHScrSizeW
+	.long svVScrSizeW
+	.long svHScrollW
+	.long svVScrollW
+	.long svRegW				;@ 0x2008 DMA CBus Low
+	.long svRegW				;@ 0x2009 DMA CBus High
+	.long svRegW				;@ 0x200A DMA VBus Low
+	.long svRegW				;@ 0x200B DMA VBus High / Control
+	.long svRegW				;@ 0x200C DMA Length
+	.long svDMACtrlW			;@ 0x200D DMA Trigger
+	.long svImportantW			;@ 0x200E TV link palette?
+	.long svImportantW			;@ 0x200F TV link something
+	.long svRegW				;@ 0x2010 Ch1 Wave Sound
+	.long svCh1FreqHighW
+	.long svRegW
+	.long svRegW
+	.long svRegW				;@ 0x2014 Ch2 Wave Sound
+	.long svCh2FreqHighW
+	.long svRegW
+	.long svRegW
+	.long svRegW				;@ 0x2018 Ch3 Sound DMA Source Low
+	.long svRegW				;@ 0x2019 Ch3 Sound DMA Source High
+	.long svCh3LengthW			;@ 0x201A Ch3 Sound DMA Length
+	.long svRegW				;@ 0x201B Ch3 Sound DMA Control
+	.long svRegW				;@ 0x201C Ch3 Sound DMA Trigger
+	.long svUnknownW			;@ 0x201D ???
+	.long svUnknownW			;@ 0x201E ???
+	.long svUnknownW			;@ 0x201F ???
+	.long svReadOnlyW			;@ 0x2020 Joypad
+	.long svLinkPortDDRW		;@ 0x2021 Link Port DDR
+	.long svLinkPortDataW		;@ 0x2022 Link Port Data
+	.long svTimerValueW			;@ 0x2023 Timer value
+	.long svTimerIRQClearW		;@ 0x2024 Timer IRQ clear
+	.long svSoundIRQClearW		;@ 0x2025 Sound IRQ clear
+	.long svSystemCtrlW			;@ 0x2026 Bank, Timer, LCD & IRQs
+	.long svReadOnlyW			;@ 0x2027 IRQ Status
+	.long svRegW				;@ 0x2028 Ch4 LFSR Frequency and Volume
+	.long svRegW				;@ 0x2029 Ch4 LFSR Length
+	.long svRegW				;@ 0x202A Ch4 LFSR Control
+	.long svUnknownW			;@ 0x202B ???
+	.long svImportantW			;@ 0x202C Mirror of 0x2028
+	.long svImportantW			;@ 0x202D Mirror of 0x2029
+	.long svImportantW			;@ 0x202E Mirror of 0x202A
+	.long svUnknownW			;@ 0x202F ???
 
 ;@----------------------------------------------------------------------------
-wsvUnknownW:
+svUnknownW:
 ;@----------------------------------------------------------------------------
-wsvImportantW:
+svImportantW:
 ;@----------------------------------------------------------------------------
 	and r0,r0,#0xFF
-	add r2,svvptr,#wsvRegs
+	add r2,svvptr,#svvRegs
 	strb r1,[r2,r0]
 	ldr r2,=debugIOUnimplW
 	bx r2
 ;@----------------------------------------------------------------------------
-wsvReadOnlyW:
+svReadOnlyW:
 ;@----------------------------------------------------------------------------
-wsvUnmappedW:
+svUnmappedW:
 ;@----------------------------------------------------------------------------
 	b _debugIOUnmappedW
 ;@----------------------------------------------------------------------------
-wsvRegW:
+svRegW:
 	and r0,r0,#0xFF
-	add r2,svvptr,#wsvRegs
+	add r2,svvptr,#svvRegs
 	strb r1,[r2,r0]
 	bx lr
 
 ;@----------------------------------------------------------------------------
-_2000w:
+svHScrSizeW:
 ;@----------------------------------------------------------------------------
-	strb r1,[svvptr,#wsvLCDXSize]
+	strb r1,[svvptr,#svvLCDHSize]
 	bx lr
 ;@----------------------------------------------------------------------------
-_2001w:
+svVScrSizeW:
 ;@----------------------------------------------------------------------------
 ;@----------------------------------------------------------------------------
 svRefW:						;@ 0x2001, Last scan line.
 ;@----------------------------------------------------------------------------
-	strb r1,[svvptr,#wsvLCDYSize]
+	strb r1,[svvptr,#svvLCDVSize]
 	cmp r1,#0x9E
 	movmi r1,#0x9E
 	cmp r1,#0xC8
@@ -456,20 +454,20 @@ svRefW:						;@ 0x2001, Last scan line.
 	b setScreenRefresh
 
 ;@----------------------------------------------------------------------------
-_2002w:
+svHScrollW:
 ;@----------------------------------------------------------------------------
-	strb r1,[svvptr,#wsvXScroll]
+	strb r1,[svvptr,#svvHScroll]
 	bx lr
 ;@----------------------------------------------------------------------------
-_2003w:
+svVScrollW:
 ;@----------------------------------------------------------------------------
-	strb r1,[svvptr,#wsvYScroll]
+	strb r1,[svvptr,#svvVScroll]
 	bx lr
 ;@----------------------------------------------------------------------------
-wsvDMACtrlW:				;@ 0x200D
+svDMACtrlW:					;@ 0x200D
 ;@----------------------------------------------------------------------------
 	strb r1,[svvptr,#wsvDMACtrl]
-	tst r1,#0x80				;@ Start?
+	tst r1,#0x80		;@ Start?
 	bxeq lr
 
 	stmfd sp!,{r4-r7,lr}
@@ -523,47 +521,59 @@ dmaEnd:
 	bx lr
 
 ;@----------------------------------------------------------------------------
-_200Ew:		;@ TV link palette?
-_200Fw:		;@ TV link something
-	bx lr
-
+svCh1FreqHighW:				;@ 0x2011 Channel 1 Frequency High
 ;@----------------------------------------------------------------------------
-_201Aw:		;@ Channel 3 Length
+	and r1,r1,#0x07
+	strb r1,[svvptr,#wsvCh1FreqHigh]
+	bx lr
+;@----------------------------------------------------------------------------
+svCh2FreqHighW:				;@ 0x2015 Channel 2 Frequency High
+;@----------------------------------------------------------------------------
+	and r1,r1,#0x07
+	strb r1,[svvptr,#wsvCh2FreqHigh]
+	bx lr
+;@----------------------------------------------------------------------------
+svCh3LengthW:				;@ 0x201A Channel 3 Length
 ;@----------------------------------------------------------------------------
 	strb r1,[svvptr,#wsvCh3Len]
 	mov r1,r1,lsl#24
 	str r1,[svvptr,#sndDmaLength]
 	bx lr
 ;@----------------------------------------------------------------------------
-_2021w:		;@ Link Port DDR write
+svLinkPortDDRW:				;@ 0x2021
 ;@----------------------------------------------------------------------------
 	strb r1,[svvptr,#wsvLinkPortDDR]
 	b handleLinkPort
 ;@----------------------------------------------------------------------------
-_2022w:		;@ Link Port Data write
+svLinkPortDataW:			;@ 0x2022
 ;@----------------------------------------------------------------------------
 	strb r1,[svvptr,#wsvLinkPortData]
 	b handleLinkPort
 ;@----------------------------------------------------------------------------
-wsvTimerValueW:		;@ 0x2023
+svTimerValueW:				;@ 0x2023
 ;@----------------------------------------------------------------------------
 	strb r1,[svvptr,#wsvIRQTimer]
 	strb r1,[svvptr,#wsvTimerValue+3]
 	bx lr
+//	tst r1,#0xFF
+//	bxne lr
+//	ldrb r0,[svvptr,#wsvIRQStatus]
+//	orr r0,r0,#1
+//	b svSetInterruptStatus
 ;@----------------------------------------------------------------------------
-wsvTimerIRQClearW:	;@ 0x2024
+svTimerIRQClearW:			;@ 0x2024
 ;@----------------------------------------------------------------------------
 	ldrb r0,[svvptr,#wsvIRQStatus]
 	bic r0,r0,#1
 	b svSetInterruptStatus
 ;@----------------------------------------------------------------------------
-wsvSoundIRQClearW:	;@ 0x2025
+svSoundIRQClearW:			;@ 0x2025
 ;@----------------------------------------------------------------------------
 	ldrb r0,[svvptr,#wsvIRQStatus]
 	bic r0,r0,#2
 	b svSetInterruptStatus
 ;@----------------------------------------------------------------------------
-_2026w:		;@ LCD & IRQs
+svSystemCtrlW:				;@ 0x2026, Bank, Timer, LCD & IRQs
 ;@----------------------------------------------------------------------------
 	ldrb r0,[svvptr,#wsvSystemControl]
 	strb r1,[svvptr,#wsvSystemControl]
@@ -576,31 +586,31 @@ _2026w:		;@ LCD & IRQs
 	ldmfd sp!,{lr}
 	ldrb r0,[svvptr,#wsvSystemControl]
 
-	mov r1,#0x2840		;@ WIN0, BG2 enable. DISPCNTBUFF startvalue. 0x2840
-	tst r0,#0x08		;@ lcd en?
+	mov r1,#0x2840				;@ WIN0, BG2 enable. DISPCNTBUFF startvalue. 0x2840
+	tst r0,#0x08				;@ lcd en?
 	orrne r1,r1,#0x0100
 
 	adr r2,ctrl1Old
-	swp r0,r1,[r2]		;@ r0=lastval
+	swp r0,r1,[r2]				;@ r0=lastval
 
 	adr r2,ctrl1Line
 	ldr addy,[svvptr,#scanline]	;@ addy=scanline
 	cmp addy,#159
 	movhi addy,#159
-	swp r1,addy,[r2]	;@ r1=lastline, lastline=scanline
+	swp r1,addy,[r2]			;@ r1=lastline, lastline=scanline
 ctrl1Finish:
 //	ldr r2,=DISPCNTBUFF
 	add r1,r2,r1,lsl#1
 	add r2,r2,addy,lsl#1
 ct1:
-//	strh r0,[r2],#-2	;@ Fill backwards from scanline to lastline
+//	strh r0,[r2],#-2			;@ Fill backwards from scanline to lastline
 //	cmp r2,r1
 //	bpl ct1
 
 	bx lr
 
-ctrl1Old:	.long 0x2840	;@ Last write
-ctrl1Line:	.long 0 		;@ When?
+ctrl1Old:	.long 0x2840		;@ Last write
+ctrl1Line:	.long 0 			;@ When?
 
 
 ;@----------------------------------------------------------------------------
@@ -687,7 +697,7 @@ checkScanlineIRQ:
 	tst r1,#0xFF000000
 	str r1,[svvptr,#wsvTimerValue]
 	ldrb r0,[svvptr,#wsvIRQStatus]
-	orreq r0,r0,#0x01				;@ #0 = Timer IRQ
+	orreq r0,r0,#0x01			;@ #0 = Timer IRQ
 	bl svSetInterruptStatus
 noTimerCount:
 
@@ -697,6 +707,17 @@ noTimerCount:
 	ldrb r0,[svvptr,#wsvNMIStatus]
 	orrcs r0,r0,#1
 	bicvs r0,r0,#1
+	bcc noSoundCount
+	ldrb r1,[svvptr,#wsvCh1Len]
+	subs r1,r1,#1
+	strbpl r1,[svvptr,#wsvCh1Len]
+	ldrb r1,[svvptr,#wsvCh2Len]
+	subs r1,r1,#1
+	strbpl r1,[svvptr,#wsvCh2Len]
+	ldrb r1,[svvptr,#wsvCh4Len]
+	subs r1,r1,#1
+	strbpl r1,[svvptr,#wsvCh4Len]
+noSoundCount:
 	bl svSetNMIStatus
 
 	ldrb r0,[svvptr,#wsvCh3Trigg]
@@ -736,7 +757,7 @@ svUpdateIrqEnable:
 	and r0,r0,r1,lsr#1
 	ldr pc,[svvptr,#irqFunction]
 ;@----------------------------------------------------------------------------
-svSetNMIStatus:		;@ r0 = NMI status, 0=off, 1=on
+svSetNMIStatus:				;@ r0 = NMI status, 0=off, 1=on
 ;@----------------------------------------------------------------------------
 	ldrb r2,[svvptr,#wsvNMIStatus]
 	cmp r0,r2
@@ -754,10 +775,10 @@ copyScrollValues:			;@ r0 = destination
 	mov r1,#0x100-(SCREEN_WIDTH-GAME_WIDTH)/2
 	sub r1,r1,r2,lsl#16
 
-	ldrb r2,[svvptr,#wsvXScroll]
+	ldrb r2,[svvptr,#svvHScroll]
 	add r1,r1,r2
-	ldrb r3,[svvptr,#wsvYScroll]
-	cmp r3,#0xAB		;@ 170
+	ldrb r3,[svvptr,#svvVScroll]
+	cmp r3,#0xAB				;@ 171
 	subpl r3,#0xAB
 	addpl r1,r1,#0x40
 	add r1,r1,r3,lsl#16
@@ -766,7 +787,7 @@ copyScrollValues:			;@ r0 = destination
 setScrlLoop:
 	stmia r0!,{r1}
 	add r3,r3,#1
-	cmp r3,#0xAA		;@ 170
+	cmp r3,#0xAA				;@ 170
 	subeq r1,r1,#0x00AA0000
 	subs r2,r2,#1
 	bne setScrlLoop
@@ -774,27 +795,27 @@ setScrlLoop:
 	bx lr
 
 ;@----------------------------------------------------------------------------
-svConvertScreen:	;@ In r0 = dest
+svConvertScreen:			;@ In r0 = dest
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r3-r8,lr}
 
-	ldr r1,[svvptr,#gfxRAM]	;@ Source
+	ldr r1,[svvptr,#gfxRAM]		;@ Source
 	ldr r4,=CHR_DECODE
 	ldr lr,=0x1FE
-	ldrb r8,[svvptr,#wsvXScroll]
-	ldrb r2,[svvptr,#wsvYScroll]
-	cmp r2,#0xAB		;@ 171
+	ldrb r8,[svvptr,#svvHScroll]
+	ldrb r2,[svvptr,#svvVScroll]
+	cmp r2,#0xAB				;@ 171
 	addpl r8,r8,#0x40
 	mov r8,r8,lsr#3
 	add r1,r1,r8,lsl#1
 
-	mov r7,#22				;@ 22 tiles high screen
+	mov r7,#22					;@ 22 tiles high screen
 scLoop:
-	mov r6,#8				;@ 8 pix high tiles
+	mov r6,#8					;@ 8 pix high tiles
 tiLoop:
-	mov r5,#21				;@ 21*8=168 pix
+	mov r5,#21					;@ 21*8=168 pix
 rwLoop:
-	ldrh r3,[r1],#2			;@ Read 8 pixels
+	ldrh r3,[r1],#2				;@ Read 8 pixels
 	ands r2,lr,r3,lsl#1
 	ldrhne r2,[r4,r2]
 	ands r3,lr,r3,lsr#7

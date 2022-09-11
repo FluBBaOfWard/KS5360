@@ -29,15 +29,15 @@ lineState:			.long 0
 
 windowData:			.long 0
 ks5360State:					;@
-wsvRegs:
-wsvLCDXSize:		.byte 0		;@ 0x00 LCD X Size
-wsvLCDYSize:		.byte 0		;@ 0x01 LCD Y Size
-wsvXScroll:			.byte 0		;@ 0x02 X Scroll
-wsvYScroll:			.byte 0		;@ 0x03 Y Scroll
-wsvMirr00:			.byte 0		;@ 0x04 Mirror of reg 0x00
-wsvMirr01:			.byte 0		;@ 0x05 Mirror of reg 0x01
-wsvMirr02:			.byte 0		;@ 0x06 Mirror of reg 0x02
-wsvMirr03:			.byte 0		;@ 0x07 Mirror of reg 0x03
+svvRegs:
+svvLCDHSize:		.byte 0		;@ 0x00 LCD Horizontal Size
+svvLCDVSize:		.byte 0		;@ 0x01 LCD Vertical Size
+svvHScroll:			.byte 0		;@ 0x02 Horizontal Scroll
+svvVScroll:			.byte 0		;@ 0x03 Vertical Scroll
+svvMirr00:			.byte 0		;@ 0x04 Mirror of reg 0x00
+svvMirr01:			.byte 0		;@ 0x05 Mirror of reg 0x01
+svvMirr02:			.byte 0		;@ 0x06 Mirror of reg 0x02
+svvMirr03:			.byte 0		;@ 0x07 Mirror of reg 0x03
 
 wsvDMACBus:
 wsvDMACBusLow:		.byte 0		;@ 0x08 DMA CBus Low
@@ -50,15 +50,18 @@ wsvDMACtrl:			.byte 0		;@ 0x0D DMA Control
 
 wsvPadding0:		.space 2	;@ 0x0E-0x0F ??
 
-wsvCh1FreqLow:		.byte 0		;@ 0x10 Channel 1 Frequency Low (Right only)
+wsvCh1Freq:						;@ Channel 1 (Right only)
+wsvCh1FreqLow:		.byte 0		;@ 0x10 Channel 1 Frequency Low
 wsvCh1FreqHigh:		.byte 0		;@ 0x11 Channel 1 Frequency High
-wsvCh1Duty:			.byte 0		;@ 0x12 Channel 1 Duty cycle
+wsvCh1Ctrl:			.byte 0		;@ 0x12 Channel 1 Volume/Duty cycle
 wsvCh1Len:			.byte 0		;@ 0x13 Channel 1 Length
-wsvCh2FreqLow:		.byte 0		;@ 0x14 Channel 2 Frequency Low (Left only)
+wsvCh2Freq:						;@ Channel 2 (Left only)
+wsvCh2FreqLow:		.byte 0		;@ 0x14 Channel 2 Frequency Low
 wsvCh2FreqHigh:		.byte 0		;@ 0x15 Channel 2 Frequency High
-wsvCh2Duty:			.byte 0		;@ 0x16 Channel 2 Duty cycle
+wsvCh2Ctrl:			.byte 0		;@ 0x16 Channel 2 Volume/Duty cycle
 wsvCh2Len:			.byte 0		;@ 0x17 Channel 2 Length
 
+wsvCh3Adr:
 wsvCh3AdrLow:		.byte 0		;@ 0x18 Channel 3 Address Low
 wsvCh3AdrHigh:		.byte 0		;@ 0x19 Channel 3 Address High
 wsvCh3Len:			.byte 0		;@ 0x1A Channel 3 Length
@@ -89,6 +92,11 @@ wsvNMITimer:		.long 0
 wsvTimerValue:		.long 0
 sndDmaCounter:		.long 0		;@ Sound DMA Counter
 sndDmaLength:		.long 0		;@ Sound DMA length
+
+ch1Counter:			.long 0		;@ Ch1 Counter
+ch2Counter:			.long 0		;@ Ch2 Counter
+ch3Counter:			.long 0		;@ Ch3 Counter
+ch4Counter:			.long 0		;@ Ch4 Counter
 
 wsvNMIStatus:		.byte 0		;@ NMI Status
 wsvLinkPortVal:		.byte 0		;@ Link Port Value
