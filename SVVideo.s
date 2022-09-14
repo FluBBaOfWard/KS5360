@@ -173,8 +173,8 @@ svVideoLoadState:			;@ In r0=svvptr, r1=source. Out r0=state size.
 
 	bl clearDirtyTiles
 
-	bl reBankSwitch89AB
-	bl reBankSwitchCDEF
+	ldrb r1,[r5,#wsvSystemControl]
+	bl memoryMap89AB
 
 	ldmfd sp!,{r4,r5,lr}
 ;@----------------------------------------------------------------------------
@@ -255,7 +255,7 @@ io_read_tbl:
 	.long svWriteOnlyR
 	.long svWriteOnlyR			;@ 0x2018
 	.long svWriteOnlyR
-	.long _201Ar
+	.long svWriteOnlyR
 	.long svWriteOnlyR
 	.long svUnknownR
 	.long svUnknownR
@@ -424,6 +424,7 @@ svReadOnlyW:
 ;@----------------------------------------------------------------------------
 svUnmappedW:
 ;@----------------------------------------------------------------------------
+	sub r0,r0,#0x2000
 	b _debugIOUnmappedW
 ;@----------------------------------------------------------------------------
 svRegW:
