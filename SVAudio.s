@@ -53,56 +53,61 @@ svAudioMixer:				;@ r0=len, r1=dest, r12=svvptr
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r0,r1,r4-r11,lr}
 ;@--------------------------
-	ldr r10,=vol3_L
+	ldr lr,=vol4_L
 
 	ldrb r2,[svvptr,#wsvCh1Ctrl]
-	tst r2,#0x40					;@ Ch 1 on?
+	ands r9,r2,#0x40				;@ Ch 1 on?
 	ldrbeq r3,[svvptr,#wsvCh1Len]
 	cmpeq r3,#0
-	and r9,r2,#0xF
-	moveq r9,#0
+	andne r9,r2,#0xF
+	ands r4,r2,#0x30				;@ Duty cycle
+	moveq r10,#0xE0000000
+	cmp r4,#0x20
+	movmi r10,#0xC0000000
+	moveq r10,#0x80000000
+	movhi r10,#0x40000000
 
 	ldrb r2,[svvptr,#wsvCh2Ctrl]
 	tst r2,#0x40					;@ Ch 2 on?
 	ldrbeq r3,[svvptr,#wsvCh2Len]
 	cmpeq r3,#0
-	and r2,r2,#0xF
-	orrne r9,r9,r2,lsl#16
+	and r3,r2,#0xF
+	orrne r9,r9,r3,lsl#16
+	ands r4,r2,#0x30				;@ Duty cycle
+	orreq r10,r10,#0x7
+	cmp r4,#0x20
+	orrmi r10,r10,#0x6
+	orreq r10,r10,#0x4
+	orrhi r10,r10,#0x2
 
-	mov r4,#0
 	ldrb r3,[svvptr,#wsvCh3Trigg]
 	ands r2,r3,#0x80
 	movne r2,#0xF
 	ldrb r3,[svvptr,#wsvCh3Ctrl]
-	tst r3,#4						;@ Ch 3 right?
-	movne r4,r2
+	ands r11,r3,#4					;@ Ch 3 right?
+	movne r11,r2,lsl#16
 	tst r3,#8						;@ Ch 3 left?
-	moveq r2,#0
-	strb r2,[r10,#vol3_L-vol3_L]
-	strb r4,[r10,#vol3_R-vol3_L]
+	orrne r11,r11,r2
 
-	mov r4,#0
 	ldrb r3,[svvptr,#wsvCh4Ctrl]
-	ldrb r2,[svvptr,#wsvCh4Len]
-	cmp r2,#0
-	orrne r3,r3,#2
-	ldrb r2,[svvptr,#wsvCh4FreqVol]
+	ands r2,r3,#2					;@ Ch 4 on?
+	ldrbeq r2,[svvptr,#wsvCh4Len]
+	cmpeq r2,#0
+	ldrbne r2,[svvptr,#wsvCh4FreqVol]
 	and r2,r2,#0xF
-	tst r3,#2						;@ Ch 4 on?
-	moveq r2,#0
 	tst r3,#4						;@ Ch 4 right?
+	moveq r4,#0
 	movne r4,r2
 	tst r3,#8						;@ Ch 4 left?
 	moveq r2,#0
-	strb r2,[r10,#vol4_L-vol3_L]
-	strb r4,[r10,#vol4_R-vol3_L]
+	strb r2,[lr,#vol4_L-vol4_L]
+	strb r4,[lr,#vol4_R-vol4_L]
 
 
 	add r2,svvptr,#ch1Counter
 	ldmia r2,{r3-r8}
 
 	mov r11,r11
-	ldmfd sp,{r0,r1}			;@ r0=len, r1=dest buffer
 	b pcmMix
 pcmMixReturn:
 	add r0,svvptr,#ch1Counter	;@ Counters
@@ -232,14 +237,14 @@ svCh4ControlW:				;@ 0x202A Channel 4 Control
 ;@ r0  = Length
 ;@ r1  = Destination
 ;@ r2  = Mixer register
-;@ r3  = Channel 1 wave R
-;@ r4  = Channel 2 wave L
-;@ r5  = Channel 3 sample
-;@ r6  = Channel 4 noise
+;@ r3  = Channel 1 Wave R
+;@ r4  = Channel 2 Wave L
+;@ r5  = Channel 3 Sample
+;@ r6  = Channel 4 Noise
 ;@ r7  = Channel 4 LFSR
 ;@ r8  = Channel 3 Sample Address
-;@ r9  = Ch1 & Ch2 volume
-;@ r10 =
+;@ r9  = Ch1 & Ch2 Volume
+;@ r10 = Ch1 & Ch2 Duty cycle
 ;@ r11 =
 ;@----------------------------------------------------------------------------
 pcmMix:				;@ r0=len, r1=dest, r12=snptr
@@ -253,27 +258,23 @@ innerMixLoop:
 	add r3,r3,#PSG_ADDITION		;@ Ch1
 	movs lr,r3,lsr#29
 	addcs r3,r3,r3,lsl#17
-	ands lr,lr,#4
-	addne r2,r2,r9,lsl#24
+	cmp lr,r10,lsr#29
+	addcs r2,r2,r9,lsl#24
 
 	add r4,r4,#PSG_ADDITION		;@ Ch2
 	movs lr,r4,lsr#29
 	addcs r4,r4,r4,lsl#17
-	ands lr,lr,#4
-	addne r2,r2,r9,lsr#8
+	cmp r4,r10,lsl#29
+	addcs r2,r2,r9,lsr#8
 
-	adds r5,r5,r5,lsl#16
+	adds r5,r5,r5,lsl#16		;@ Ch3
 	addcs r8,r8,#1
-vol3_L:
-	mov lr,#0x00				;@ Volume left
-vol3_R:
-	orr lr,lr,#0xFF0000			;@ Volume right
-	ldrb r11,[r8]				;@ Channel 3
-	movmi r11,r11,lsl#4
-	and r11,r11,#0xF0
+	ldrb lr,[r8]
+	movmi lr,lr,lsl#4
+	and lr,lr,#0xF0
 	mla r2,lr,r11,r2
 
-	adds r6,r6,#PSG_NOISE_ADD
+	adds r6,r6,#PSG_NOISE_ADD	;@ Ch4
 	addcs r6,r6,r6,lsl#16
 	movscs r7,r7,lsr#1
 	ldrcs lr,[svvptr,#ch4Feedback]
