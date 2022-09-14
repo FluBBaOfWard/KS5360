@@ -376,19 +376,19 @@ io_write_tbl:
 	.long svDMACtrlW			;@ 0x200D DMA Trigger
 	.long svImportantW			;@ 0x200E TV link palette?
 	.long svImportantW			;@ 0x200F TV link something
-	.long svRegW				;@ 0x2010 Ch1 Wave Sound
+	.long svCh1FreqLowW			;@ 0x2010 Ch1 Wave Sound
 	.long svCh1FreqHighW
 	.long svRegW
 	.long svRegW
-	.long svRegW				;@ 0x2014 Ch2 Wave Sound
+	.long svCh2FreqLowW			;@ 0x2014 Ch2 Wave Sound
 	.long svCh2FreqHighW
 	.long svRegW
 	.long svRegW
 	.long svRegW				;@ 0x2018 Ch3 Sound DMA Source Low
 	.long svRegW				;@ 0x2019 Ch3 Sound DMA Source High
 	.long svCh3LengthW			;@ 0x201A Ch3 Sound DMA Length
-	.long svRegW				;@ 0x201B Ch3 Sound DMA Control
-	.long svRegW				;@ 0x201C Ch3 Sound DMA Trigger
+	.long svCh3ControlW			;@ 0x201B Ch3 Sound DMA Control
+	.long svCh3TriggerW			;@ 0x201C Ch3 Sound DMA Trigger
 	.long svUnknownW			;@ 0x201D ???
 	.long svUnknownW			;@ 0x201E ???
 	.long svUnknownW			;@ 0x201F ???
@@ -400,13 +400,13 @@ io_write_tbl:
 	.long svSoundIRQClearW		;@ 0x2025 Sound IRQ clear
 	.long svSystemCtrlW			;@ 0x2026 Bank, Timer, LCD & IRQs
 	.long svReadOnlyW			;@ 0x2027 IRQ Status
-	.long svRegW				;@ 0x2028 Ch4 LFSR Frequency and Volume
+	.long svCh4FreqVolW			;@ 0x2028 Ch4 LFSR Frequency and Volume
 	.long svRegW				;@ 0x2029 Ch4 LFSR Length
-	.long svRegW				;@ 0x202A Ch4 LFSR Control
+	.long svCh4ControlW			;@ 0x202A Ch4 LFSR Control
 	.long svUnknownW			;@ 0x202B ???
-	.long svImportantW			;@ 0x202C Mirror of 0x2028
+	.long svCh4FreqVolW			;@ 0x202C Mirror of 0x2028
 	.long svImportantW			;@ 0x202D Mirror of 0x2029
-	.long svImportantW			;@ 0x202E Mirror of 0x202A
+	.long svCh4ControlW			;@ 0x202E Mirror of 0x202A
 	.long svUnknownW			;@ 0x202F ???
 
 ;@----------------------------------------------------------------------------
@@ -521,25 +521,6 @@ dmaEnd:
 	bx lr
 
 ;@----------------------------------------------------------------------------
-svCh1FreqHighW:				;@ 0x2011 Channel 1 Frequency High
-;@----------------------------------------------------------------------------
-	and r1,r1,#0x07
-	strb r1,[svvptr,#wsvCh1FreqHigh]
-	bx lr
-;@----------------------------------------------------------------------------
-svCh2FreqHighW:				;@ 0x2015 Channel 2 Frequency High
-;@----------------------------------------------------------------------------
-	and r1,r1,#0x07
-	strb r1,[svvptr,#wsvCh2FreqHigh]
-	bx lr
-;@----------------------------------------------------------------------------
-svCh3LengthW:				;@ 0x201A Channel 3 Length
-;@----------------------------------------------------------------------------
-	strb r1,[svvptr,#wsvCh3Len]
-	mov r1,r1,lsl#24
-	str r1,[svvptr,#sndDmaLength]
-	bx lr
-;@----------------------------------------------------------------------------
 svLinkPortDDRW:				;@ 0x2021
 ;@----------------------------------------------------------------------------
 	strb r1,[svvptr,#wsvLinkPortDDR]
@@ -611,7 +592,6 @@ ct1:
 
 ctrl1Old:	.long 0x2840		;@ Last write
 ctrl1Line:	.long 0 			;@ When?
-
 
 ;@----------------------------------------------------------------------------
 handleLinkPort:
