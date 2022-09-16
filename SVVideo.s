@@ -163,7 +163,7 @@ svVideoSaveState:			;@ In r0=destination, r1=svvptr. Out r0=state size.
 svVideoLoadState:			;@ In r0=svvptr, r1=source. Out r0=state size.
 	.type	svVideoLoadState STT_FUNC
 ;@----------------------------------------------------------------------------
-	stmfd sp!,{r4,r5,lr}
+	stmfd sp!,{r4,r5,r10,lr}
 	mov r5,r0					;@ Store svvptr (r0)
 	mov r4,r1					;@ Store source
 
@@ -173,10 +173,11 @@ svVideoLoadState:			;@ In r0=svvptr, r1=source. Out r0=state size.
 
 	bl clearDirtyTiles
 
+	ldrb r0,[svvptr,#wsvLinkPortVal]
 	ldrb r1,[r5,#wsvSystemControl]
-	bl memoryMap89AB
+	bl reBankSwitchCart
 
-	ldmfd sp!,{r4,r5,lr}
+	ldmfd sp!,{r4,r5,r10,lr}
 ;@----------------------------------------------------------------------------
 svVideoGetStateSize:		;@ Out r0=state size.
 	.type	svVideoGetStateSize STT_FUNC
