@@ -15,7 +15,7 @@ extern "C" {
 
 #define HW_AUTO              (0)
 #define HW_SUPERVISION       (1)
-#define HW_SUPERVISIONCOLOR  (2)
+#define HW_SV_TV_LINK        (2)
 #define HW_SELECT_END        (3)
 
 #define SOC_ASWAN		(0)
@@ -91,6 +91,14 @@ typedef struct {
 	u32 sndDmaSource;			// Original Sound DMA source address
 	u32 sndDmaLength;			// Original Sound DMA length
 
+	u32 ch1Counter;				// Ch1 Counter
+	u32 ch2Counter;				// Ch2 Counter
+	u32 ch3Counter;				// Ch3 Counter
+	u32 ch4Counter;				// Ch4 Counter
+	u32 ch4LFSR;				// Ch4 Noise LFSR
+	u32 ch3Address;				// Ch3 sample address (physical)
+	u32 ch4Feedback;			// Ch4 Noise Feedback
+
 	u8 wsvNMIStatus;			// NMI pin out status
 	u8 wsvLinkPortVal;			// Link Port Value
 	u8 wsvSOC;					// ASWAN or KS5360
@@ -135,7 +143,6 @@ int svVideoGetStateSize(void);
 
 void svDoScanline(void);
 void svConvertScreen(void *destination);
-void svConvertTiles(void);
 
 #ifdef __cplusplus
 } // extern "C"

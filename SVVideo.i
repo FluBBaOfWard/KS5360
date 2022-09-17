@@ -9,7 +9,7 @@
 
 #define HW_AUTO              (0)
 #define HW_SUPERVISION       (1)
-#define HW_SUPERVISIONCOLOR  (2)
+#define HW_SV_TV_LINK        (2)
 #define HW_SELECT_END        (3)
 
 #define SOC_ASWAN		(0)
