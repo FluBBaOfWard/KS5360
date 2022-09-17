@@ -7,7 +7,7 @@
 //
 
 #ifdef __arm__
-#include "SVVideo.i"
+#include "KS5360.i"
 
 	.global svAudioReset
 	.global svAudioMixer
