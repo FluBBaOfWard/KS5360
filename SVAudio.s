@@ -25,7 +25,11 @@
 	.syntax unified
 	.arm
 
-	.section .text
+#if GBA
+	.section .ewram, "ax", %progbits	;@ For the GBA
+#else
+	.section .text						;@ For anything else
+#endif
 	.align 2
 
 #define PSG_DIVIDE 16
