@@ -13,13 +13,14 @@
 extern "C" {
 #endif
 
-#define HW_AUTO              (0)
-#define HW_SUPERVISION       (1)
-#define HW_SV_TV_LINK        (2)
-#define HW_SELECT_END        (3)
+#define HW_AUTO        (0)
+#define HW_SUPERVISION (1)
+#define HW_SV_TV_LINK  (2)
+#define HW_SELECT_END  (3)
 
 #define SOC_ASWAN		(0)
 #define SOC_KS5360		(1)
+#define SOC_KS5360_TV	(2)
 
 /** Game screen width in pixels */
 #define GAME_WIDTH  (160)
