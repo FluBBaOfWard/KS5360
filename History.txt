@@ -1,6 +1,9 @@
 KS5360 revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-
 
+V0.2.1 - 2022-09-25 (FluBBa)
+	Some fixes for GBA version.
+
 V0.2.0 - 2022-09-17 (FluBBa)
 	Added sound.
 	Added save state.
