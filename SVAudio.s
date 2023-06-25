@@ -3,7 +3,7 @@
 //  Watara Supervision Sound emulation for GBA/NDS.
 //
 //  Created by Fredrik Ahlström on 2022-09-11.
-//  Copyright © 2022 Fredrik Ahlström. All rights reserved.
+//  Copyright © 2022-2023 Fredrik Ahlström. All rights reserved.
 //
 
 #ifdef __arm__
@@ -52,72 +52,6 @@ svAudioReset:				;@ svvptr=r12=pointer to struct
 	str r0,[svvptr,#ch4Feedback]
 	bx lr
 
-;@----------------------------------------------------------------------------
-svAudioMixer:				;@ r0=len, r1=dest, r12=svvptr
-;@----------------------------------------------------------------------------
-	stmfd sp!,{r0,r1,r4-r11,lr}
-;@--------------------------
-	ldr lr,=vol4_L
-
-	ldrb r2,[svvptr,#wsvCh1Ctrl]
-	ands r9,r2,#0x40				;@ Ch 1 on?
-	ldrbeq r3,[svvptr,#wsvCh1Len]
-	cmpeq r3,#0
-	andne r9,r2,#0xF
-	ands r4,r2,#0x30				;@ Duty cycle
-	moveq r10,#0xE0000000
-	cmp r4,#0x20
-	movmi r10,#0xC0000000
-	moveq r10,#0x80000000
-	movhi r10,#0x40000000
-
-	ldrb r2,[svvptr,#wsvCh2Ctrl]
-	tst r2,#0x40					;@ Ch 2 on?
-	ldrbeq r3,[svvptr,#wsvCh2Len]
-	cmpeq r3,#0
-	and r3,r2,#0xF
-	orrne r9,r9,r3,lsl#16
-	ands r4,r2,#0x30				;@ Duty cycle
-	orreq r10,r10,#0x7
-	cmp r4,#0x20
-	orrmi r10,r10,#0x6
-	orreq r10,r10,#0x4
-	orrhi r10,r10,#0x2
-
-	ldrb r3,[svvptr,#wsvCh3Trigg]
-	ands r2,r3,#0x80
-	movne r2,#0xF
-	ldrb r3,[svvptr,#wsvCh3Ctrl]
-	ands r11,r3,#4					;@ Ch 3 right?
-	movne r11,r2,lsl#16
-	tst r3,#8						;@ Ch 3 left?
-	orrne r11,r11,r2
-
-	ldrb r3,[svvptr,#wsvCh4Ctrl]
-	ands r2,r3,#2					;@ Ch 4 on?
-	ldrbeq r2,[svvptr,#wsvCh4Len]
-	cmpeq r2,#0
-	ldrbne r2,[svvptr,#wsvCh4FreqVol]
-	and r2,r2,#0xF
-	tst r3,#4						;@ Ch 4 right?
-	moveq r4,#0
-	movne r4,r2
-	tst r3,#8						;@ Ch 4 left?
-	moveq r2,#0
-	strb r2,[lr,#vol4_L-vol4_L]
-	strb r4,[lr,#vol4_R-vol4_L]
-
-
-	add r2,svvptr,#ch1Counter
-	ldmia r2,{r3-r8}
-
-	mov r11,r11
-	b pcmMix
-pcmMixReturn:
-	add r0,svvptr,#ch1Counter	;@ Counters
-	stmia r0,{r3-r8}
-
-	ldmfd sp!,{r0,r1,r4-r11,pc}
 ;@----------------------------------------------------------------------------
 svCh1FreqLowW:				;@ 0x2010 Channel 1 Frequency Low
 ;@----------------------------------------------------------------------------
@@ -229,6 +163,71 @@ svCh4ControlW:				;@ 0x202A Channel 4 Control
 	bx lr
 
 ;@----------------------------------------------------------------------------
+svAudioMixer:				;@ r0=len, r1=dest, r12=svvptr
+;@----------------------------------------------------------------------------
+	stmfd sp!,{r0,r1,r4-r11,lr}
+;@--------------------------
+	ldr lr,=vol4_L
+
+	ldrb r2,[svvptr,#wsvCh1Ctrl]
+	ands r9,r2,#0x40				;@ Ch 1 on?
+	ldrbeq r3,[svvptr,#wsvCh1Len]
+	cmpeq r3,#0
+	andne r9,r2,#0xF
+	ands r4,r2,#0x30				;@ Duty cycle
+	moveq r10,#0xE0000000
+	cmp r4,#0x20
+	movmi r10,#0xC0000000
+	moveq r10,#0x80000000
+	movhi r10,#0x40000000
+
+	ldrb r2,[svvptr,#wsvCh2Ctrl]
+	tst r2,#0x40					;@ Ch 2 on?
+	ldrbeq r3,[svvptr,#wsvCh2Len]
+	cmpeq r3,#0
+	and r3,r2,#0xF
+	orrne r9,r9,r3,lsl#16
+	ands r4,r2,#0x30				;@ Duty cycle
+	orreq r10,r10,#0x7
+	cmp r4,#0x20
+	orrmi r10,r10,#0x6
+	orreq r10,r10,#0x4
+	orrhi r10,r10,#0x2
+
+	ldrb r3,[svvptr,#wsvCh3Trigg]
+	ands r2,r3,#0x80
+	movne r2,#0xF
+	ldrb r3,[svvptr,#wsvCh3Ctrl]
+	ands r11,r3,#4					;@ Ch 3 right?
+	movne r11,r2,lsl#16
+	tst r3,#8						;@ Ch 3 left?
+	orrne r11,r11,r2
+
+	ldrb r3,[svvptr,#wsvCh4Ctrl]
+	ands r2,r3,#2					;@ Ch 4 on?
+	ldrbeq r2,[svvptr,#wsvCh4Len]
+	cmpeq r2,#0
+	ldrbne r2,[svvptr,#wsvCh4FreqVol]
+	and r2,r2,#0xF
+	tst r3,#4						;@ Ch 4 right?
+	moveq r4,#0
+	movne r4,r2
+	tst r3,#8						;@ Ch 4 left?
+	moveq r2,#0
+	strb r2,[lr,#vol4_L-vol4_L]
+	strb r4,[lr,#vol4_R-vol4_L]
+
+	add r2,svvptr,#ch1Counter
+	ldmia r2,{r3-r8}
+
+	mov r11,r11
+	b pcmMix
+pcmMixReturn:
+	add r0,svvptr,#ch1Counter	;@ Counters
+	stmia r0,{r3-r8}
+
+	ldmfd sp!,{r0,r1,r4-r11,pc}
+;@----------------------------------------------------------------------------
 
 #ifdef NDS
 	.section .itcm						;@ For the NDS ARM9
@@ -236,7 +235,6 @@ svCh4ControlW:				;@ 0x202A Channel 4 Control
 	.section .iwram, "ax", %progbits	;@ For the GBA
 #endif
 	.align 2
-
 ;@----------------------------------------------------------------------------
 ;@ r0  = Length
 ;@ r1  = Destination
@@ -249,9 +247,9 @@ svCh4ControlW:				;@ 0x202A Channel 4 Control
 ;@ r8  = Channel 3 Sample Address
 ;@ r9  = Ch1 & Ch2 Volume
 ;@ r10 = Ch1 & Ch2 Duty cycle
-;@ r11 =
+;@ r11 = Ch3 Volume
 ;@----------------------------------------------------------------------------
-pcmMix:				;@ r0=len, r1=dest, r12=snptr
+pcmMix:				;@ r0=len, r1=dest, r12=svvptr
 // IIIVCCCCCCCCCCC000001FFFFFFFFFFF
 // I=sampleindex, V=overflow, C=counter, F=frequency
 ;@----------------------------------------------------------------------------

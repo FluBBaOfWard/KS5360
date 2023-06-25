@@ -3,7 +3,7 @@
 //  Watara Supervision video emulation for GBA/NDS.
 //
 //  Created by Fredrik Ahlström on 2004-11-30.
-//  Copyright © 2004-2022 Fredrik Ahlström. All rights reserved.
+//  Copyright © 2004-2023 Fredrik Ahlström. All rights reserved.
 //
 ;@ ASM header for the Watara Supervision video emulator
 
