@@ -1,7 +1,8 @@
 KS5360 revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-
 
-V0.2.2 - 2023-06-25 (FluBBa)
+V0.2.2 - 2023-09-17 (FluBBa)
+	Fixed samples pointer not initialized.
 	Cleaned up sound source.
 
 V0.2.1 - 2022-09-25 (FluBBa)

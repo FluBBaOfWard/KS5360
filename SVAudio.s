@@ -50,6 +50,9 @@ svAudioReset:				;@ svvptr=r12=pointer to struct
 	str r0,[svvptr,#ch4LFSR]
 	mov r0,#PSG_NOISE_FEED
 	str r0,[svvptr,#ch4Feedback]
+	ldr r0,=romSpacePtr
+	ldr r0,[r0]
+	str r0,[svvptr,#ch3Address]
 	bx lr
 
 ;@----------------------------------------------------------------------------
@@ -165,7 +168,7 @@ svCh4ControlW:				;@ 0x202A Channel 4 Control
 ;@----------------------------------------------------------------------------
 svAudioMixer:				;@ r0=len, r1=dest, r12=svvptr
 ;@----------------------------------------------------------------------------
-	stmfd sp!,{r0,r1,r4-r11,lr}
+	stmfd sp!,{r4-r11,lr}
 ;@--------------------------
 	ldr lr,=vol4_L
 
@@ -209,8 +212,7 @@ svAudioMixer:				;@ r0=len, r1=dest, r12=svvptr
 	cmpeq r2,#0
 	ldrbne r2,[svvptr,#wsvCh4FreqVol]
 	and r2,r2,#0xF
-	tst r3,#4						;@ Ch 4 right?
-	moveq r4,#0
+	ands r4,r3,#4					;@ Ch 4 right?
 	movne r4,r2
 	tst r3,#8						;@ Ch 4 left?
 	moveq r2,#0
@@ -220,13 +222,12 @@ svAudioMixer:				;@ r0=len, r1=dest, r12=svvptr
 	add r2,svvptr,#ch1Counter
 	ldmia r2,{r3-r8}
 
-	mov r11,r11
 	b pcmMix
 pcmMixReturn:
 	add r0,svvptr,#ch1Counter	;@ Counters
 	stmia r0,{r3-r8}
 
-	ldmfd sp!,{r0,r1,r4-r11,pc}
+	ldmfd sp!,{r4-r11,pc}
 ;@----------------------------------------------------------------------------
 
 #ifdef NDS
@@ -291,7 +292,6 @@ vol4_R:
 	tst r0,#3
 	bne innerMixLoop
 
-noSweep:
 	eor r2,#0x00008000
 	cmp r0,#0
 	strpl r2,[r1],#4
