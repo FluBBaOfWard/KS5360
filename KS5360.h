@@ -3,7 +3,7 @@
 //  Watara Supervision video emulation for GBA/NDS.
 //
 //  Created by Fredrik Ahlström on 2004-11-30.
-//  Copyright © 2004-2023 Fredrik Ahlström. All rights reserved.
+//  Copyright © 2004-2024 Fredrik Ahlström. All rights reserved.
 //
 
 #ifndef SVVIDEO_HEADER
@@ -18,9 +18,8 @@ extern "C" {
 #define HW_SV_TV_LINK  (2)
 #define HW_SELECT_END  (3)
 
-#define SOC_ASWAN		(0)
-#define SOC_KS5360		(1)
-#define SOC_KS5360_TV	(2)
+#define SOC_KS5360		(0)
+#define SOC_KS5360_TV	(1)
 
 /** Game screen width in pixels */
 #define GAME_WIDTH  (160)

@@ -3,7 +3,7 @@
 //  Watara Supervision Sound emulation for GBA/NDS.
 //
 //  Created by Fredrik Ahlström on 2022-09-11.
-//  Copyright © 2022-2023 Fredrik Ahlström. All rights reserved.
+//  Copyright © 2022-2024 Fredrik Ahlström. All rights reserved.
 //
 
 #ifdef __arm__
@@ -25,7 +25,7 @@
 	.syntax unified
 	.arm
 
-#if GBA
+#ifdef GBA
 	.section .ewram, "ax", %progbits	;@ For the GBA
 #else
 	.section .text						;@ For anything else
@@ -291,10 +291,17 @@ vol4_R:
 	sub r0,r0,#1
 	tst r0,#3
 	bne innerMixLoop
-
+#ifdef GBA
+	eor r2,#0x80000000
+	add r2,r2,r2,lsr#16
+	mov r2,r2,lsr#9
+	cmp r0,#0
+	strbpl r2,[r1],#1
+#else
 	eor r2,#0x00008000
 	cmp r0,#0
 	strpl r2,[r1],#4
+#endif
 	bhi mixLoop				;@ ?? cycles according to No$gba
 
 	b pcmMixReturn

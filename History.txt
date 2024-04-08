@@ -1,7 +1,8 @@
 KS5360 revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-
 
-V0.2.2 - 2023-09-17 (FluBBa)
+V0.2.2 - 2024-04-08 (FluBBa)
+	Added GBA sound mixing.
 	Fixed samples pointer not initialized.
 	Cleaned up sound source.
 
