@@ -618,7 +618,7 @@ endFrame:
 	stmfd sp!,{lr}
 //	ldr r2,[svvptr,#wsvBgXScroll]
 //	bl scrollCnt
-	bl endFrameGfx
+	bl gfxEndFrame
 
 	ldmfd sp!,{pc}
 
