@@ -325,7 +325,7 @@ svWrite:					;@ I/O write
 ;@----------------------------------------------------------------------------
 	mov r1,r0
 	sub r2,r12,#0x2000
-	cmp r2,#0x30
+	cmp r2,#0x40
 	ldrmi pc,[pc,r2,lsl#2]
 	b svUnmappedW
 io_write_tbl:
@@ -377,6 +377,22 @@ io_write_tbl:
 	.long svImportantW			;@ 0x202D Mirror of 0x2029
 	.long svCh4ControlW			;@ 0x202E Mirror of 0x202A
 	.long svUnknownW			;@ 0x202F ???
+	.long svUnknownW			;@ 0x2030 ???
+	.long svUnknownW			;@ 0x2031 ???
+	.long svUnknownW			;@ 0x2032 ???
+	.long svUnknownW			;@ 0x2033 ???
+	.long svUnknownW			;@ 0x2034 ???
+	.long svUnknownW			;@ 0x2035 ???
+	.long svUnknownW			;@ 0x2036 ???
+	.long svUnknownW			;@ 0x2037 ???
+	.long svRegW				;@ 0x2038 Blitter
+	.long svRegW				;@ 0x2039 Blitter
+	.long svRegW				;@ 0x203A Blitter
+	.long svRegW				;@ 0x203B Blitter
+	.long svRegW				;@ 0x203C Blitter
+	.long svRegW				;@ 0x203D Blitter
+	.long svRegW				;@ 0x203E Blitter
+	.long svRegW				;@ 0x203F Blitter
 
 ;@----------------------------------------------------------------------------
 svUnknownW:
@@ -444,29 +460,19 @@ svDMACtrlW:					;@ 0x200D
 	bxeq lr
 
 	stmfd sp!,{r4-r6,lr}
-	ldr r5,[svvptr,#wsvDMACBus]	;@ Also DMAVBus
-	mov r4,r5,lsl#16
-
-	mov r5,r5,lsr#16			;@ r5=destination
-	mov r5,r5,ror#13
-
 	ldrb r0,[svvptr,#wsvDMALen]	;@ r6=length
 	movs r6,r0,lsl#24
 	moveq r0,#0x100
 	sub cycles,cycles,r0,lsl#CYC_SHIFT+4
-	tst r5,#2					;@ From VBus to CBus?
-	beq dmaFromVRAMLoop
 
-dmaToVRAMLoop:
-	mov addy,r4,lsr#16
-	bl memRead8
-	add r1,m6502zpage,#0x2000
-	strb r0,[r1,r5,lsr#19]
-	add r4,r4,#0x10000
-	add r5,r5,#0x80000
-	subs r6,r6,#0x00100000
-	bne dmaToVRAMLoop
-	b dmaEnd
+	ldr r5,[svvptr,#wsvDMACBus]	;@ Also DMAVBus
+	movs r4,r5,lsl#16			;@ Test sign
+
+	mov r5,r5,lsr#16			;@ r5=destination
+	mov r5,r5,ror#13
+
+	movspl r0,r5,ror#2			;@ From VBus to CBus?
+	bmi dmaToVRAMLoop
 
 dmaFromVRAMLoop:
 	add r1,m6502zpage,#0x2000
@@ -477,6 +483,17 @@ dmaFromVRAMLoop:
 	add r5,r5,#0x80000
 	subs r6,r6,#0x00100000
 	bne dmaFromVRAMLoop
+	b dmaEnd
+
+dmaToVRAMLoop:
+	mov addy,r4,lsr#16
+	bl memRead8
+	add r1,m6502zpage,#0x2000
+	strb r0,[r1,r5,lsr#19]
+	add r4,r4,#0x10000
+	add r5,r5,#0x80000
+	subs r6,r6,#0x00100000
+	bne dmaToVRAMLoop
 
 dmaEnd:
 	mov r5,r5,ror#19

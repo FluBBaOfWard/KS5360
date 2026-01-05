@@ -1,6 +1,8 @@
 Watara Supervision KS5360 To do
 -------------------------------
 
+	Add Blitter.
+	Add Color support for TV version.
 	Add check for dirty tiles in tilemap renderer.
 	Handle LCD on/off.
 

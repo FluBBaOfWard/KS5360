@@ -91,7 +91,7 @@ wsvMirr028:			.byte 0		;@ 0x2C Mirror of Reg 0x28
 wsvMirr029:			.byte 0		;@ 0x2D Mirror of Reg 0x29
 wsvMirr02A:			.byte 0		;@ 0x2E Mirror of Reg 0x2A
 wsvPadding3:		.byte 0		;@ 0x2F ???
-
+wsvBlitter:			.space 16
 
 ;@----------------------------------------------------------------------------
 wsvNMITimer:		.long 0

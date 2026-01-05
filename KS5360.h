@@ -3,7 +3,7 @@
 //  Watara Supervision video emulation for GBA/NDS.
 //
 //  Created by Fredrik Ahlström on 2004-11-30.
-//  Copyright © 2004-2024 Fredrik Ahlström. All rights reserved.
+//  Copyright © 2004-2026 Fredrik Ahlström. All rights reserved.
 //
 
 #ifndef SVVIDEO_HEADER
@@ -50,7 +50,7 @@ typedef struct {
 	u8 wsvDMALen;				// 0x0C DMA Length
 	u8 wsvDMACtrl;				// 0x0D DMA Control
 
-	u8 wsvPadding0[2];			// 0x0E-0x0F ??
+	u8 wsvPadding0E[2];			// 0x0E-0x0F ??
 
 	u8 wsvCh1FreqLow;			// 0x10 Channel 1 Frequency Low (Right only)
 	u8 wsvCh1FreqHigh;			// 0x11 Channel 1 Frequency High
@@ -66,7 +66,7 @@ typedef struct {
 	u8 wsvCh3Len;				// 0x1A Channel 3 Length
 	u8 wsvCh3Ctrl;				// 0x1B Channel 3 Control
 	u8 wsvCh3Trigg;				// 0x1C Channel 3 Trigger
-	u8 wsvPadding1[3];			// 0x1D - 0x1F ???
+	u8 wsvPadding1D[3];			// 0x1D - 0x1F ???
 
 	u8 wsvController;			// 0x20 Controller
 	u8 wsvLinkPortDDR;			// 0x21 Link Port DDR
@@ -79,11 +79,13 @@ typedef struct {
 	u8 wsvCh4FreqVol;			// 0x28 Channel 4 Frquency and volume
 	u8 wsvCh4Len;				// 0x29 Channel 4 Length
 	u8 wsvCh4Ctrl;				// 0x2A Channel 4 Control
-	u8 wsvPadding2;				// 0x2B ???
+	u8 wsvPadding2B;			// 0x2B ???
 	u8 wsvMirr028;				// 0x2C Mirror of Reg 0x28
 	u8 wsvMirr029;				// 0x2D Mirror of Reg 0x29
 	u8 wsvMirr02A;				// 0x2E Mirror of Reg 0x2A
-	u8 wsvPadding3;				// 0x2F ???
+	u8 wsvPadding2F;			// 0x2F ???
+	u8 wsvPadding30[8];			// 0x30 - 0x37 ???
+	u8 wsvBlitter[8];			// 0x38 - 0x3F Blitter
 
 //------------------------------
 	u32 wsvNMITimer;
