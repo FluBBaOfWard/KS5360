@@ -3,14 +3,11 @@
 //  Watara Supervision Sound emulation for GBA/NDS.
 //
 //  Created by Fredrik Ahlström on 2022-09-11.
-//  Copyright © 2022-2024 Fredrik Ahlström. All rights reserved.
+//  Copyright © 2022-2026 Fredrik Ahlström. All rights reserved.
 //
-
 #ifdef __arm__
-#include "KS5360.i"
 
-	.global svAudioReset
-	.global svAudioMixer
+#include "KS5360.i"
 
 	.global svCh1FreqLowW
 	.global svCh1FreqHighW
@@ -21,6 +18,9 @@
 	.global svCh3TriggerW
 	.global svCh4FreqVolW
 	.global svCh4ControlW
+
+	.global svAudioReset
+	.global svAudioMixer
 
 	.syntax unified
 	.arm
@@ -39,7 +39,7 @@
 #define PSG_NOISE_FEED2 0x60
 
 ;@----------------------------------------------------------------------------
-svAudioReset:				;@ svvptr=r12=pointer to struct
+svAudioReset:				;@ svvptr=r10=pointer to struct
 ;@----------------------------------------------------------------------------
 	mov r0,#0x00000800
 	str r0,[svvptr,#ch1Counter]
@@ -66,10 +66,10 @@ svCh1FreqHighW:				;@ 0x2011 Channel 1 Frequency High
 	and r1,r1,#0x07
 	strb r1,[svvptr,#wsvCh1FreqHigh]
 calcCh1Freq:
-	ldrh r1,[svvptr,#wsvCh1Freq]
-	cmp r1,#0xF
-	movmi r1,#0xF
+	ldr r1,[svvptr,#wsvCh1Freq]
 	mvn r1,r1,lsl#20
+	cmn r1,#0x01000000
+	biccs r1,#0x00F00000
 	mov r1,r1,lsr#20
 //	add r1,r1,r1,lsl#17
 //	orr r1,r1,#0x800
@@ -92,10 +92,10 @@ svCh2FreqHighW:				;@ 0x2015 Channel 2 Frequency High
 	and r1,r1,#0x07
 	strb r1,[svvptr,#wsvCh2FreqHigh]
 calcCh2Freq:
-	ldrh r1,[svvptr,#wsvCh2Freq]
-	cmp r1,#0xF
-	movmi r1,#0xF
+	ldr r1,[svvptr,#wsvCh2Freq]
 	mvn r1,r1,lsl#20
+	cmn r1,#0x01000000
+	biccs r1,#0x00F00000
 	mov r1,r1,lsr#20
 //	add r1,r1,r1,lsl#17
 //	orr r1,r1,#0x800
@@ -126,9 +126,10 @@ svCh3ControlW:				;@ 0x201B Channel 3 Control
 svCh3TriggerW:				;@ 0x201C Channel 3 Trigger
 ;@----------------------------------------------------------------------------
 	strb r1,[svvptr,#wsvCh3Trigg]
-	ldrh r0,[svvptr,#wsvCh3Adr]
-	subs r0,r0,#0x8000
-	bxmi lr
+	ldr r0,[svvptr,#wsvCh3Adr]
+	movs r0,r0,lsl#17
+	bxcc lr
+	mov r0,r0,lsr#17
 	ldr r2,=romSpacePtr
 	ldr r2,[r2]
 	ldrb r1,[svvptr,#wsvCh3Ctrl]
@@ -166,7 +167,7 @@ svCh4ControlW:				;@ 0x202A Channel 4 Control
 	bx lr
 
 ;@----------------------------------------------------------------------------
-svAudioMixer:				;@ r0=len, r1=dest, r12=svvptr
+svAudioMixer:				;@ r0=len, r1=dest, r10=svvptr
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r4-r11,lr}
 ;@--------------------------
@@ -178,11 +179,11 @@ svAudioMixer:				;@ r0=len, r1=dest, r12=svvptr
 	cmpeq r3,#0
 	andne r9,r2,#0xF
 	ands r4,r2,#0x30				;@ Duty cycle
-	moveq r10,#0xE0000000
+	moveq r12,#0xE0000000
 	cmp r4,#0x20
-	movmi r10,#0xC0000000
-	moveq r10,#0x80000000
-	movhi r10,#0x40000000
+	movmi r12,#0xC0000000
+	moveq r12,#0x80000000
+	movhi r12,#0x40000000
 
 	ldrb r2,[svvptr,#wsvCh2Ctrl]
 	tst r2,#0x40					;@ Ch 2 on?
@@ -191,11 +192,11 @@ svAudioMixer:				;@ r0=len, r1=dest, r12=svvptr
 	and r3,r2,#0xF
 	orrne r9,r9,r3,lsl#16
 	ands r4,r2,#0x30				;@ Duty cycle
-	orreq r10,r10,#0x7
+	orreq r12,r12,#0x7
 	cmp r4,#0x20
-	orrmi r10,r10,#0x6
-	orreq r10,r10,#0x4
-	orrhi r10,r10,#0x2
+	orrmi r12,r12,#0x6
+	orreq r12,r12,#0x4
+	orrhi r12,r12,#0x2
 
 	ldrb r3,[svvptr,#wsvCh3Trigg]
 	ands r2,r3,#0x80
@@ -247,7 +248,7 @@ pcmMixReturn:
 ;@ r7  = Channel 4 LFSR
 ;@ r8  = Channel 3 Sample Address
 ;@ r9  = Ch1 & Ch2 Volume
-;@ r10 = Ch1 & Ch2 Duty cycle
+;@ r12 = Ch1 & Ch2 Duty cycle
 ;@ r11 = Ch3 Volume
 ;@----------------------------------------------------------------------------
 pcmMix:				;@ r0=len, r1=dest, r12=svvptr
@@ -261,13 +262,13 @@ innerMixLoop:
 	add r3,r3,#PSG_ADDITION		;@ Ch1
 	movs lr,r3,lsr#29
 	addcs r3,r3,r3,lsl#17
-	cmp lr,r10,lsr#29
+	cmp lr,r12,lsr#29
 	addcs r2,r2,r9,lsl#24
 
 	add r4,r4,#PSG_ADDITION		;@ Ch2
 	movs lr,r4,lsr#29
 	addcs r4,r4,r4,lsl#17
-	cmp r4,r10,lsl#29
+	cmp r4,r12,lsl#29
 	addcs r2,r2,r9,lsr#8
 
 	adds r5,r5,r5,lsl#16		;@ Ch3

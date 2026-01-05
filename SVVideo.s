@@ -3,9 +3,8 @@
 //  Watara Supervision video emulation for GBA/NDS.
 //
 //  Created by Fredrik Ahlström on 2004-11-30.
-//  Copyright © 2004-2024 Fredrik Ahlström. All rights reserved.
+//  Copyright © 2004-2026 Fredrik Ahlström. All rights reserved.
 //
-
 #ifdef __arm__
 
 #ifdef GBA
@@ -16,8 +15,6 @@
 #include "KS5360.i"
 #include "../ARM6502/M6502.i"
 
-#define CYCLE_PSL (246*2)
-
 	.global svVideoInit
 	.global svVideoReset
 	.global svVideoSaveState
@@ -26,7 +23,6 @@
 	.global svDoScanline
 	.global copyScrollValues
 	.global svConvertScreen
-	.global svBufferWindows
 	.global svRead
 	.global svWrite
 	.global svRefW
@@ -44,17 +40,16 @@
 ;@----------------------------------------------------------------------------
 svVideoInit:				;@ Only need to be called once
 ;@----------------------------------------------------------------------------
+	ldr r0,=CHR_DECODE			;@ Destination 0x200
 	mov r1,#0xffffff00			;@ Build chr decode tbl
-	ldr r3,=CHR_DECODE			;@ 0x200
 chrLutLoop:
-	and r0,r1,#0x03
-	and r2,r1,#0x0C
-	orr r0,r0,r2,lsl#2
-	and r2,r1,#0x30
-	orr r0,r0,r2,lsl#4
-	and r2,r1,#0xC0
-	orr r0,r0,r2,lsl#6
-	strh r0,[r3],#2
+	and r2,r1,#0xFF
+	orr r2,r2,r2,lsl#4
+	bic r2,r2,#0xF0
+	orr r2,r2,r2,lsl#2
+	bic r2,r2,#0x0C00
+	bic r2,r2,#0x000C
+	strh r2,[r0],#2
 	adds r1,r1,#1
 	bne chrLutLoop
 
@@ -72,18 +67,19 @@ bgrLoop:
 
 	bx lr
 ;@----------------------------------------------------------------------------
-svVideoReset:		;@ r0=NmiFunc, r1=IrqFunc, r2=ram+LUTs, r3=SOC 0=mono,1=color,2=crystal, r12=svvptr
+svVideoReset:		;@ r0=NmiFunc, r1=IrqFunc, r2=ram+LUTs, r3=SOC 0=mono,1=color,2=crystal, r10=svvptr
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r0-r3,lr}
 
-	mov r0,svvptr
-	ldr r1,=ks5360Size/4
+	add r0,svvptr,#ks5360State
+	ldr r1,=ks5360StateSize/4
 	bl memclr_					;@ Clear KS5360 state
 
 	ldr r2,=lineStateTable
 	ldr r1,[r2],#4
 	mov r0,#-1
-	stmia svvptr,{r0-r2}		;@ Reset scanline, nextChange & lineState
+	add r3,svvptr,#scanline
+	stmia r3,{r0-r2}			;@ Reset scanline, nextChange & lineState
 
 	ldmfd sp!,{r0-r3,lr}
 	cmp r0,#0
@@ -106,35 +102,40 @@ dummyIrqFunc:
 ;@----------------------------------------------------------------------------
 _debugIOUnmappedR:
 ;@----------------------------------------------------------------------------
-	ldr r3,=debugIOUnmappedR
-	bx r3
+	ldr r12,=debugIOUnmappedR
+	bx r12
 ;@----------------------------------------------------------------------------
 _debugIOUnimplR:
 ;@----------------------------------------------------------------------------
-	ldr r3,=debugIOUnimplR
-	bx r3
+	ldr r12,=debugIOUnimplR
+	bx r12
 ;@----------------------------------------------------------------------------
 _debugIOUnmappedW:
 ;@----------------------------------------------------------------------------
-	ldr r3,=debugIOUnmappedW
-	bx r3
+	ldr r12,=debugIOUnmappedW
+	bx r12
+;@----------------------------------------------------------------------------
+_debugIOUnimplW:
+;@----------------------------------------------------------------------------
+	ldr r12,=debugIOUnimplW
+	bx r12
 ;@----------------------------------------------------------------------------
 memCopy:
 ;@----------------------------------------------------------------------------
-	ldr r3,=memcpy
+	ldr r12,=memcpy
 ;@----------------------------------------------------------------------------
-thumbCallR3:
+thumbCallR12:
 ;@----------------------------------------------------------------------------
-	bx r3
+	bx r12
 ;@----------------------------------------------------------------------------
-svRegistersReset:			;@ in r3=SOC
+svRegistersReset:
 ;@----------------------------------------------------------------------------
+	add r0,svvptr,#svvRegs
 	adr r1,IO_Default
 	mov r2,#0x30
-	add r0,svvptr,#svvRegs
-	stmfd sp!,{svvptr,lr}
+	stmfd sp!,{lr}
 	bl memCopy
-	ldmfd sp!,{svvptr,lr}
+	ldmfd sp!,{lr}
 	ldrb r1,[svvptr,#svvLCDVSize]
 	b svRefW
 
@@ -163,7 +164,7 @@ svVideoSaveState:			;@ In r0=destination, r1=svvptr. Out r0=state size.
 svVideoLoadState:			;@ In r0=svvptr, r1=source. Out r0=state size.
 	.type	svVideoLoadState STT_FUNC
 ;@----------------------------------------------------------------------------
-	stmfd sp!,{r4,r5,r10,lr}
+	stmfd sp!,{r4,r5,svvptr,lr}
 	mov r5,r0					;@ Store svvptr (r0)
 	mov r4,r1					;@ Store source
 
@@ -173,11 +174,11 @@ svVideoLoadState:			;@ In r0=svvptr, r1=source. Out r0=state size.
 
 	bl clearDirtyTiles
 
-	ldrb r0,[svvptr,#wsvLinkPortVal]
+	ldrb r0,[r5,#wsvLinkPortVal]
 	ldrb r1,[r5,#wsvSystemControl]
 	bl reBankSwitchCart
 
-	ldmfd sp!,{r4,r5,r10,lr}
+	ldmfd sp!,{r4,r5,svvptr,lr}
 ;@----------------------------------------------------------------------------
 svVideoGetStateSize:		;@ Out r0=state size.
 	.type	svVideoGetStateSize STT_FUNC
@@ -187,45 +188,9 @@ svVideoGetStateSize:		;@ Out r0=state size.
 
 	.pool
 ;@----------------------------------------------------------------------------
-svBufferWindows:
-;@----------------------------------------------------------------------------
-//	ldr r0,[svvptr,#wsvFgWinXPos]	;@ Win pos/size
-	ldr r0,=0xA0A00000
-	and r1,r0,#0x000000FF		;@ H start
-	and r2,r0,#0x00FF0000		;@ H end
-	cmp r1,#GAME_WIDTH
-	movpl r1,#GAME_WIDTH
-	add r1,r1,#(SCREEN_WIDTH-GAME_WIDTH)/2
-	add r2,r2,#0x10000
-	cmp r2,#GAME_WIDTH<<16
-	movpl r2,#GAME_WIDTH<<16
-	add r2,r2,#((SCREEN_WIDTH-GAME_WIDTH)/2)<<16
-	cmp r2,r1,lsl#16
-	orr r1,r1,r2,lsl#8
-	mov r1,r1,ror#24
-	movmi r1,#0
-	strh r1,[svvptr,#windowData]
-
-	and r1,r0,#0x0000FF00		;@ V start
-	mov r2,r0,lsr#24			;@ V end
-	cmp r1,#GAME_HEIGHT<<8
-	movpl r1,#GAME_HEIGHT<<8
-	add r1,r1,#((SCREEN_HEIGHT-GAME_HEIGHT)/2)<<8
-	add r2,r2,#1
-	cmp r2,#GAME_HEIGHT
-	movpl r2,#GAME_HEIGHT
-	add r2,r2,#(SCREEN_HEIGHT-GAME_HEIGHT)/2
-	cmp r2,r1,lsr#8
-	orr r1,r1,r2
-	movmi r1,#0
-	strh r1,[svvptr,#windowData+2]
-
-	bx lr
-
-;@----------------------------------------------------------------------------
 svRead:						;@ I/O read
 ;@----------------------------------------------------------------------------
-	sub r2,r0,#0x2000
+	sub r2,r12,#0x2000
 	cmp r2,#0x30
 	ldrmi pc,[pc,r2,lsl#2]
 	b svUnmappedR
@@ -286,9 +251,10 @@ svWriteOnlyR:
 svUnmappedR:
 ;@----------------------------------------------------------------------------
 	mov r11,r11					;@ No$GBA breakpoint
-	stmfd sp!,{svvptr,lr}
+	mov r0,r12
+	stmfd sp!,{r3,r12,lr}
 	bl _debugIOUnmappedR
-	ldmfd sp!,{svvptr,lr}
+	ldmfd sp!,{r3,r12,lr}
 	mov r0,#0x00
 	bx lr
 ;@----------------------------------------------------------------------------
@@ -298,12 +264,13 @@ svUnknownR:
 ;@----------------------------------------------------------------------------
 svImportantR:
 	mov r11,r11					;@ No$GBA breakpoint
-	stmfd sp!,{r0,svvptr,lr}
+	mov r0,r12
+	stmfd sp!,{r0,r3,r12,lr}
 	bl _debugIOUnimplR
-	ldmfd sp!,{r0,svvptr,lr}
+	ldmfd sp!,{r0,r3,r12,lr}
 ;@----------------------------------------------------------------------------
 svRegR:
-	and r0,r0,#0xFF
+	and r0,r12,#0xFF
 	add r2,svvptr,#svvRegs
 	ldrb r0,[r2,r0]
 	bx lr
@@ -356,7 +323,8 @@ svIRQStatusR:				;@ 0x2027 IRQ bits
 ;@----------------------------------------------------------------------------
 svWrite:					;@ I/O write
 ;@----------------------------------------------------------------------------
-	sub r2,r0,#0x2000
+	mov r1,r0
+	sub r2,r12,#0x2000
 	cmp r2,#0x30
 	ldrmi pc,[pc,r2,lsl#2]
 	b svUnmappedW
@@ -415,21 +383,24 @@ svUnknownW:
 ;@----------------------------------------------------------------------------
 svImportantW:
 ;@----------------------------------------------------------------------------
-	and r0,r0,#0xFF
+	and r0,r12,#0xFF
 	add r2,svvptr,#svvRegs
 	strb r1,[r2,r0]
-	ldr r2,=debugIOUnimplW
-	bx r2
+	stmfd sp!,{r3,r12,lr}
+	bl _debugIOUnimplW
+	ldmfd sp!,{r3,r12,pc}
 ;@----------------------------------------------------------------------------
 svReadOnlyW:
 ;@----------------------------------------------------------------------------
 svUnmappedW:
 ;@----------------------------------------------------------------------------
-	sub r0,r0,#0x2000
-	b _debugIOUnmappedW
+	sub r0,r12,#0x2000
+	stmfd sp!,{r3,r12,lr}
+	bl _debugIOUnmappedW
+	ldmfd sp!,{r3,r12,pc}
 ;@----------------------------------------------------------------------------
 svRegW:
-	and r0,r0,#0xFF
+	and r0,r12,#0xFF
 	add r2,svvptr,#svvRegs
 	strb r1,[r2,r0]
 	bx lr
@@ -472,12 +443,11 @@ svDMACtrlW:					;@ 0x200D
 	tst r1,#0x80		;@ Start?
 	bxeq lr
 
-	stmfd sp!,{r4-r7,lr}
-	mov r7,svvptr
-	ldrh r4,[svvptr,#wsvDMACBus]
-	mov r4,r4,lsl#16
+	stmfd sp!,{r4-r6,lr}
+	ldr r5,[svvptr,#wsvDMACBus]	;@ Also DMAVBus
+	mov r4,r5,lsl#16
 
-	ldrh r5,[svvptr,#wsvDMAVBus];@ r5=destination
+	mov r5,r5,lsr#16			;@ r5=destination
 	mov r5,r5,ror#13
 
 	ldrb r0,[svvptr,#wsvDMALen]	;@ r6=length
@@ -509,17 +479,16 @@ dmaFromVRAMLoop:
 	bne dmaFromVRAMLoop
 
 dmaEnd:
-	mov svvptr,r7
-	mov r4,r4,lsr#16
-	strh r4,[svvptr,#wsvDMACBus]
 	mov r5,r5,ror#19
-	strh r5,[svvptr,#wsvDMAVBus]
+	mov r4,r4,lsr#16
+	orr r5,r4,r5,lsl#16
+	str r5,[svvptr,#wsvDMACBus]	;@ Also DMAVBus
 
 	mov r0,#0x00
 	strb r0,[svvptr,#wsvDMALen]
 	strb r0,[svvptr,#wsvDMACtrl]
 
-	ldmfd sp!,{r4-r7,lr}
+	ldmfd sp!,{r4-r6,lr}
 	bx lr
 
 ;@----------------------------------------------------------------------------
@@ -630,7 +599,8 @@ frameEndHook:
 	adr r2,lineStateTable
 	ldr r1,[r2],#4
 	mov r0,#-1
-	stmia svvptr,{r0-r2}		;@ Reset scanline, nextChange & lineState
+	add r12,svvptr,#scanline
+	stmia r12,{r0-r2}			;@ Reset scanline, nextChange & lineState
 	bx lr
 
 ;@----------------------------------------------------------------------------
@@ -649,7 +619,7 @@ redoScanline:
 ;@----------------------------------------------------------------------------
 	ldr r2,[svvptr,#lineState]
 	ldmia r2!,{r0,r1}
-	stmib svvptr,{r1,r2}		;@ Write nextLineChange & lineState
+	stmib r12,{r1,r2}		;@ Write nextLineChange & lineState
 	stmfd sp!,{lr}
 	mov lr,pc
 	bx r0
@@ -657,7 +627,8 @@ redoScanline:
 ;@----------------------------------------------------------------------------
 svDoScanline:
 ;@----------------------------------------------------------------------------
-	ldmia svvptr,{r0,r1}		;@ Read scanLine & nextLineChange
+	add r12,svvptr,#scanline
+	ldmia r12,{r0,r1}			;@ Read scanLine & nextLineChange
 	add r0,r0,#1
 	cmp r0,r1
 	bpl redoScanline
@@ -823,7 +794,7 @@ rwLoop:
 
 ;@----------------------------------------------------------------------------
 #ifdef GBA
-	.section .sbss				;@ For the GBA
+	.section .sbss				;@ This is EWRAM on GBA with devkitARM
 #else
 	.section .bss
 #endif

@@ -101,7 +101,7 @@ typedef struct {
 
 	u8 wsvNMIStatus;			// NMI pin out status
 	u8 wsvLinkPortVal;			// Link Port Value
-	u8 wsvSOC;					// ASWAN or KS5360
+	u8 wsvSOC;					// KS5360 or KS5360_TV
 	u8 wsvLatchedDispCtrl;		// Latched Display Control
 	u8 wsvLowBattery;
 	u8 wsvPadding4[3];

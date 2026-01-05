@@ -3,9 +3,13 @@
 //  Watara Supervision video emulation for GBA/NDS.
 //
 //  Created by Fredrik Ahlström on 2004-11-30.
-//  Copyright © 2004-2024 Fredrik Ahlström. All rights reserved.
+//  Copyright © 2004-2026 Fredrik Ahlström. All rights reserved.
 //
-;@ ASM header for the Watara Supervision video emulator
+#if !__ASSEMBLER__
+	#error This header file is only for use in assembly files!
+#endif
+
+#include "ARM6502/M6502.i"
 
 #define HW_AUTO        (0)
 #define HW_SUPERVISION (1)
@@ -20,9 +24,11 @@
 /** Game screen height in pixels */
 #define GAME_HEIGHT (160)
 
-	svvptr		.req r12
+#define CYCLE_PSL (246*2)
+
+	svvptr		.req m6502ptr
 						;@ SVVideo.s
-	.struct 0
+	.struct m6502Size
 scanline:			.long 0		;@ These 3 must be first in state.
 nextLineChange:		.long 0
 lineState:			.long 0
@@ -48,7 +54,7 @@ wsvDMAVBusHigh:		.byte 0		;@ 0x0B DMA VBus High
 wsvDMALen:			.byte 0		;@ 0x0C DMA Length
 wsvDMACtrl:			.byte 0		;@ 0x0D DMA Control
 
-wsvPadding0:		.space 2	;@ 0x0E-0x0F ??
+wsvPadding0:		.skip 2		;@ 0x0E-0x0F ??
 
 wsvCh1Freq:						;@ Channel 1 (Right only)
 wsvCh1FreqLow:		.byte 0		;@ 0x10 Channel 1 Frequency Low
@@ -67,7 +73,7 @@ wsvCh3AdrHigh:		.byte 0		;@ 0x19 Channel 3 Address High
 wsvCh3Len:			.byte 0		;@ 0x1A Channel 3 Length
 wsvCh3Ctrl:			.byte 0		;@ 0x1B Channel 3 Control
 wsvCh3Trigg:		.byte 0		;@ 0x1C Channel 3 Trigger
-wsvPadding1:		.space 3	;@ 0x1D - 0x1F ???
+wsvPadding1:		.skip 3		;@ 0x1D - 0x1F ???
 
 wsvController:		.byte 0		;@ 0x20 Controller
 wsvLinkPortDDR:		.byte 0		;@ 0x21 Link Port DDR
@@ -103,10 +109,10 @@ ch4Feedback:		.long 0		;@ Ch4 Noise Feedback
 
 wsvNMIStatus:		.byte 0		;@ NMI Status
 wsvLinkPortVal:		.byte 0		;@ Link Port Value
-wsvSOC:				.byte 0		;@ ASWAN or KS5360
+wsvSOC:				.byte 0		;@ KS5360 or KS5360_TV
 wsvLatchedDispCtrl:	.byte 0		;@ Latched Display Control
 wsvLowBattery:		.byte 0
-wsvPadding4:		.space 3
+wsvPadding4:		.skip 3
 
 scrollLine: 		.long 0		;@ Last line scroll was updated.
 ks5360StateEnd:
@@ -119,6 +125,7 @@ gfxRAM:				.long 0		;@ 0x2000
 scrollBuff:			.long 0
 
 ks5360Size:
+ks5360StateSize = ks5360StateEnd-ks5360State
 
 ;@----------------------------------------------------------------------------
 

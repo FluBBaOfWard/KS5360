@@ -1,6 +1,11 @@
 KS5360 revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-
 
+
+V0.2.5 - 2026-01-05 (FluBBa)
+	Added the ARM6502 a submodule of KS5360.
+	Optimized register access.
+
 V0.2.2 - 2024-04-08 (FluBBa)
 	Added GBA sound mixing.
 	Fixed samples pointer not initialized.
