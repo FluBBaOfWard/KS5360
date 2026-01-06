@@ -99,7 +99,6 @@ typedef struct {
 	u32 ch4Counter;				// Ch4 Counter
 	u32 ch4LFSR;				// Ch4 Noise LFSR
 	u32 ch3Address;				// Ch3 sample address (physical)
-	u32 ch4Feedback;			// Ch4 Noise Feedback
 
 	u8 wsvNMIStatus;			// NMI pin out status
 	u8 wsvLinkPortVal;			// Link Port Value

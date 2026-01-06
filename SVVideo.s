@@ -39,7 +39,17 @@
 	.align 2
 ;@----------------------------------------------------------------------------
 svVideoInit:				;@ Only need to be called once
+;@ r0=NmiFunc, r1=IrqFunc, r2=ram+LUTs
 ;@----------------------------------------------------------------------------
+	cmp r0,#0
+	adreq r0,dummyIrqFunc
+	str r0,[svvptr,#nmiFunction]
+	cmp r1,#0
+	adreq r1,dummyIrqFunc
+	str r1,[svvptr,#irqFunction]
+
+	str r2,[svvptr,#gfxRAM]
+
 	ldr r0,=CHR_DECODE			;@ Destination 0x200
 	mov r1,#0xffffff00			;@ Build chr decode tbl
 chrLutLoop:
@@ -67,9 +77,9 @@ bgrLoop:
 
 	bx lr
 ;@----------------------------------------------------------------------------
-svVideoReset:		;@ r0=NmiFunc, r1=IrqFunc, r2=ram+LUTs, r3=SOC 0=mono,1=color,2=crystal, r10=svvptr
+svVideoReset:		;@ r0=SOC 0=KS5360,1=KS5360_TV
 ;@----------------------------------------------------------------------------
-	stmfd sp!,{r0-r3,lr}
+	stmfd sp!,{r0,lr}
 
 	add r0,svvptr,#ks5360State
 	ldr r1,=ks5360StateSize/4
@@ -81,19 +91,10 @@ svVideoReset:		;@ r0=NmiFunc, r1=IrqFunc, r2=ram+LUTs, r3=SOC 0=mono,1=color,2=c
 	add r3,svvptr,#scanline
 	stmia r3,{r0-r2}			;@ Reset scanline, nextChange & lineState
 
-	ldmfd sp!,{r0-r3,lr}
-	cmp r0,#0
-	adreq r0,dummyIrqFunc
-	str r0,[svvptr,#nmiFunction]
-	cmp r1,#0
-	adreq r1,dummyIrqFunc
-	str r1,[svvptr,#irqFunction]
-
-	str r2,[svvptr,#gfxRAM]
+	ldmfd sp!,{r0,lr}
+	strb r0,[svvptr,#wsvSOC]
 	ldr r0,=SCROLL_BUFF
 	str r0,[svvptr,#scrollBuff]
-
-	strb r3,[svvptr,#wsvSOC]
 
 	b svRegistersReset
 
@@ -738,7 +739,7 @@ svUpdateNMIEnable:
 	and r0,r0,r1
 	ldr pc,[svvptr,#nmiFunction]
 ;@----------------------------------------------------------------------------
-copyScrollValues:			;@ r0 = destination
+copyScrollValues:			;@ In r0 = destination
 ;@----------------------------------------------------------------------------
 	mov r2,#(SCREEN_HEIGHT-GAME_HEIGHT)/2
 	add r0,r0,r2,lsl#2			;@ 4 bytes per row
@@ -765,7 +766,7 @@ setScrlLoop:
 	bx lr
 
 ;@----------------------------------------------------------------------------
-svConvertScreen:			;@ In r0 = dest
+svConvertScreen:			;@ In r0 = destination
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r3-r8,lr}
 

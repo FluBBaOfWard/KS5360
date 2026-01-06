@@ -105,7 +105,6 @@ ch3Counter:			.long 0		;@ Ch3 Counter
 ch4Counter:			.long 0		;@ Ch4 Counter
 ch4LFSR:			.long 0		;@ Ch4 Noise LFSR
 ch3Address:			.long 0		;@ Ch3 sample address (physical)
-ch4Feedback:		.long 0		;@ Ch4 Noise Feedback
 
 wsvNMIStatus:		.byte 0		;@ NMI Status
 wsvLinkPortVal:		.byte 0		;@ Link Port Value

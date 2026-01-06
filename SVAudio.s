@@ -12,8 +12,6 @@
 #define PSG_DIVIDE 8
 #define PSG_ADDITION 0x00020000*PSG_DIVIDE
 #define PSG_NOISE_ADD 0x00040000*PSG_DIVIDE
-#define PSG_NOISE_FEED 0x6000
-#define PSG_NOISE_FEED2 0x60
 
 	.global svCh1FreqLowW
 	.global svCh1FreqHighW
@@ -46,10 +44,7 @@ svAudioReset:				;@ svvptr=r10=pointer to struct
 	str r0,[svvptr,#ch2Counter]
 	str r0,[svvptr,#ch3Counter]
 	str r0,[svvptr,#ch4Counter]
-	mov r0,#0x4000
 	str r0,[svvptr,#ch4LFSR]
-	mov r0,#PSG_NOISE_FEED
-	str r0,[svvptr,#ch4Feedback]
 	ldr r0,=romSpacePtr
 	ldr r0,[r0]
 	str r0,[svvptr,#ch3Address]
@@ -157,13 +152,12 @@ svCh4FreqVolW:				;@ 0x2028 Channel 4 Frequency & Volume
 svCh4ControlW:				;@ 0x202A Channel 4 Control
 ;@----------------------------------------------------------------------------
 	strb r1,[svvptr,#wsvCh4Ctrl]
-	and r0,r1,#0x10				;@ LFSR enabled?
-	tst r1,#1					;@ Tap 7 or 15?
-	moveq r0,r0,lsl#2			;@ 0x40
-	movne r0,r0,lsl#10			;@ 0x4000
+	ands r0,r1,#0x10			;@ LFSR enabled?
+	ldrne r0,=0xFFFE0000
+	tst r1,#1					;@ Tap 6 & 5 or 14 & 13?
+	orreq r0,r0,#0x003			;@ 0x40
+	orrne r0,r0,#0x300			;@ 0x4000
 	str r0,[svvptr,#ch4LFSR]
-	orr r0,r0,r0,lsr#1
-	str r0,[svvptr,#ch4Feedback]
 	bx lr
 
 ;@----------------------------------------------------------------------------
@@ -199,13 +193,12 @@ svAudioMixer:				;@ r0=len, r1=dest, r10=svvptr
 	orrhi r12,r12,#0x2
 
 	ldrb r3,[svvptr,#wsvCh3Trigg]
-	ands r2,r3,#0x80
-	movne r2,#0xF
+	mov r2,r3,lsr#7
 	ldrb r3,[svvptr,#wsvCh3Ctrl]
 	ands r11,r3,#4					;@ Ch 3 right?
-	movne r11,r2,lsl#16
+	movne r11,r2,lsl#4+16
 	tst r3,#8						;@ Ch 3 left?
-	orrne r11,r11,r2
+	orrne r11,r11,r2,lsl#4
 
 	ldrb r3,[svvptr,#wsvCh4Ctrl]
 	ands r2,r3,#2					;@ Ch 4 on?
@@ -279,16 +272,17 @@ innerMixLoop:
 
 	adds r6,r6,#PSG_NOISE_ADD	;@ Ch4
 	addcs r6,r6,r6,lsl#16
-	movscs r7,r7,lsr#1
-	ldrcs lr,[svvptr,#ch4Feedback]
-	eorcs r7,r7,lr
-	tst r7,#0x00000001
+	movcs lr,r7,lsr#17			;@ Mask LFSR.
+	addcs r7,r7,lr,lsl#17
+	ands lr,r7,r7,lsl#22		;@ Mask Taps
+	eorsne lr,lr,r7,lsl#22
+	orrne r7,r7,#0x00020000
 vol4_L:
 	addne r2,r2,#0xFF00			;@ Volume left
 vol4_R:
 	addne r2,r2,#0xFF000000		;@ Volume right
 
-	adds r0,r0,#0x40000000
+	adds r0,r0,#0x40000000		;@ Run inner loop 4x
 	bcc innerMixLoop
 #ifdef GBA
 	eor r2,#0x80000000

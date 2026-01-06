@@ -2,7 +2,8 @@ Watara Supervision KS5360 To do
 -------------------------------
 
 	Clamp audio to 4bit.
-	Add Blitter.
+	Set HScroll per line (0-7).
+	Add Blitter support for TV version.
 	Add Color support for TV version.
 	Add check for dirty tiles in tilemap renderer.
 	Handle LCD on/off.
