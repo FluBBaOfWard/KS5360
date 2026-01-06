@@ -9,6 +9,12 @@
 
 #include "KS5360.i"
 
+#define PSG_DIVIDE 8
+#define PSG_ADDITION 0x00020000*PSG_DIVIDE
+#define PSG_NOISE_ADD 0x00040000*PSG_DIVIDE
+#define PSG_NOISE_FEED 0x6000
+#define PSG_NOISE_FEED2 0x60
+
 	.global svCh1FreqLowW
 	.global svCh1FreqHighW
 	.global svCh2FreqLowW
@@ -31,12 +37,6 @@
 	.section .text						;@ For anything else
 #endif
 	.align 2
-
-#define PSG_DIVIDE 16
-#define PSG_ADDITION 0x00020000*PSG_DIVIDE
-#define PSG_NOISE_ADD 0x00020000*PSG_DIVIDE
-#define PSG_NOISE_FEED 0x6000
-#define PSG_NOISE_FEED2 0x60
 
 ;@----------------------------------------------------------------------------
 svAudioReset:				;@ svvptr=r10=pointer to struct
@@ -255,17 +255,16 @@ pcmMix:				;@ r0=len, r1=dest, r12=svvptr
 // IIIVCCCCCCCCCCC000001FFFFFFFFFFF
 // I=sampleindex, V=overflow, C=counter, F=frequency
 ;@----------------------------------------------------------------------------
-	mov r0,r0,lsl#2
 mixLoop:
 	mov r2,#0x80000000
 innerMixLoop:
-	add r3,r3,#PSG_ADDITION		;@ Ch1
+	add r3,r3,#PSG_ADDITION		;@ Ch1 Right
 	movs lr,r3,lsr#29
 	addcs r3,r3,r3,lsl#17
 	cmp lr,r12,lsr#29
 	addcs r2,r2,r9,lsl#24
 
-	add r4,r4,#PSG_ADDITION		;@ Ch2
+	add r4,r4,#PSG_ADDITION		;@ Ch2 Left
 	movs lr,r4,lsr#29
 	addcs r4,r4,r4,lsl#17
 	cmp r4,r12,lsl#29
@@ -289,18 +288,17 @@ vol4_L:
 vol4_R:
 	addne r2,r2,#0xFF000000		;@ Volume right
 
-	sub r0,r0,#1
-	tst r0,#3
-	bne innerMixLoop
+	adds r0,r0,#0x40000000
+	bcc innerMixLoop
 #ifdef GBA
 	eor r2,#0x80000000
 	add r2,r2,r2,lsr#16
 	mov r2,r2,lsr#9
-	cmp r0,#0
+	subs r0,r0,#1
 	strbpl r2,[r1],#1
 #else
 	eor r2,#0x00008000
-	cmp r0,#0
+	subs r0,r0,#1
 	strpl r2,[r1],#4
 #endif
 	bhi mixLoop				;@ ?? cycles according to No$gba

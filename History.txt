@@ -2,7 +2,8 @@ KS5360 revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-
 
 
-V0.2.5 - 2026-01-05 (FluBBa)
+V0.2.5 - 2026-01-06 (FluBBa)
+	Fixed sound pitch of the two square waves.
 	Added the ARM6502 a submodule of KS5360.
 	Optimized register access.
 
